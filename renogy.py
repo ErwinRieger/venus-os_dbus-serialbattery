@@ -42,6 +42,7 @@ class Renogy(Battery):
         # call a function that will connect to the battery, send a command and retrieve the result.
         # The result or call should be unique to this BMS. Battery name or version, etc.
         # Return True if success, False for failure
+<<<<<<< HEAD
         result = False
         try:
             result = self.read_gen_data()
@@ -49,6 +50,9 @@ class Renogy(Battery):
             pass
 
         return result
+=======
+        return self.read_gen_data()
+>>>>>>> Importing.
 
     def get_settings(self):
         # After successful  connection get_settings will be call to set up the battery.

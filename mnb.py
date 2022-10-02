@@ -85,6 +85,7 @@ class MNB(Battery):
     def test_connection(self):
         self.get_settings()
         init_max(self)
+<<<<<<< HEAD
 
         result = False
         try:
@@ -93,6 +94,9 @@ class MNB(Battery):
             pass
 
         return result
+=======
+        return self.read_status_data()
+>>>>>>> Importing.
 
     def get_settings(self):  # imutable constants for the battery
         # Need to include this in BMS initialisation
