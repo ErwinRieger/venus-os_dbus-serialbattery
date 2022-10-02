@@ -41,8 +41,10 @@ MbPage {
 	model: VisualItemModel {
 
 		MbItemRow {
-			description: qsTr("Cells Sum")
+			description: qsTr("MinCell/MaxCell/Cells Sum")
 			values: [
+				MbTextBlock { item { bind: service.path("/System/MinVoltageCellId") } width: 70; height: 25 },
+				MbTextBlock { item { bind: service.path("/System/MaxVoltageCellId") } width: 70; height: 25 },
 				MbTextBlock { item { bind: service.path("/Voltages/Sum") } width: 70; height: 25 }
 			]
 		}
