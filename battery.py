@@ -109,6 +109,66 @@ class Battery(object):
                 if voltage:
                     voltageSum+=voltage
 
+
+            #
+            # Mod erri
+            #
+            # MIN_CELL_VOLTAGE = 3.0
+            # RECONNECTCELLVOLTAGE = 3.275 # about 50% SOC, note: inverter will reconnect at 52v
+
+            # MAX_CELL_VOLTAGE = 3.45
+            # FLOAT_CELL_VOLTAGE = MAX_CELL_VOLTAGE - 0.05
+
+            minCellVoltage = self.get_min_cell_voltage()
+            logging.info(f"minCellVoltage: {minCellVoltage}v, MIN_CELL_VOLTAGE: {MIN_CELL_VOLTAGE}v, RECONNECTCELLVOLTAGE: {RECONNECTCELLVOLTAGE}v")
+
+            if minCellVoltage != None:
+
+                # disconnect from battery if a cell voltage is below min voltage
+                if minCellVoltage < MIN_CELL_VOLTAGE and self.inverterControl.isOn(): # xxx hardcoded
+
+                    logging.info("xxx how to control inverter?")
+
+                    # turn off inverter
+                    logging.info(f"turn off inverter, pack voltage: {voltageSum}")
+                    self.inverterControl.turnOff()
+
+                # re-connect to battery if all cells are above min voltage
+                if minCellVoltage > RECONNECTCELLVOLTAGE and not self.inverterControl.isOn(): # xxx about 50% SOC, hardcoded
+
+                    logging.info("xxx how to control inverter?")
+
+                    # turn on inverter
+                    logging.info(f"turn on inverter, pack voltage: {voltageSum}")
+                    self.inverterControl.turnOn()
+
+            maxCellVoltage = self.get_max_cell_voltage()
+            logging.info(f"maxCellVoltage: {maxCellVoltage}, MAX_CELL_VOLTAGE: {MAX_CELL_VOLTAGE}v, FLOAT_CELL_VOLTAGE: {FLOAT_CELL_VOLTAGE}v")
+
+            if maxCellVoltage != None:
+
+                chargevoltage = 16 * MAX_CELL_VOLTAGE
+
+                # stop charging if a cell voltage is above 3.45v
+                if maxCellVoltage > MAX_CELL_VOLTAGE:
+                    # freeze charging voltage
+                    chargevoltage = voltageSum
+                    logging.info(f"throttling charger, pack voltage: {chargevoltage}")
+            
+                # start charging if all cells below 3.4v
+                elif maxCellVoltage < FLOAT_CELL_VOLTAGE:
+                    chargevoltage = 55.2 # 3.345 v per cell
+                    logging.info(f"un-throttling charger, pack voltage: {voltageSum}")
+
+            # logging.info(f"setting mppt.ChargeVoltage: {self.packVolt}")
+            # self._dbusmonitor.set_value(self.pv_charger, "/Link/ChargeVoltage", self.packVolt) # value stays for 60 minutes
+
+            # self.control_voltage = MAX_CELL_VOLTAGE * self.cell_count
+            logging.info(f"setting control_voltage: {chargevoltage}")
+            self.control_voltage = chargevoltage
+
+            return
+
             if None == self.max_voltage_start_time:
                 if MAX_CELL_VOLTAGE * self.cell_count <= voltageSum and True == self.allow_max_voltage:
                     self.max_voltage_start_time = time()
@@ -419,9 +479,13 @@ class Battery(object):
         logger.info(f'> MIN_CELL_VOLTAGE {MIN_CELL_VOLTAGE}V | MAX_CELL_VOLTAGE {MAX_CELL_VOLTAGE}V')
   
 <<<<<<< HEAD
+<<<<<<< HEAD
         return
 =======
 >>>>>>> Importing.
 =======
         return
 >>>>>>> Update serialbattery code, includes our daly.py changes.
+=======
+        return
+>>>>>>> Implement charge voltage limit.

@@ -43,14 +43,8 @@ MAX_CELL_VOLTAGE = 3.5
 DRIVER_SUBVERSION = 'b3'
 zero_char = chr(48)
 degree_sign = u'\N{DEGREE SIGN}'
-# Cell min/max voltages - used with the cell count to get the min/max battery voltage
-# MIN_CELL_VOLTAGE = 2.9
-MIN_CELL_VOLTAGE = 2.55
-# MAX_CELL_VOLTAGE = 3.45
-# MAX_CELL_VOLTAGE = 3.50
-MAX_CELL_VOLTAGE = 3.55
-# FLOAT_CELL_VOLTAGE = 3.35
-FLOAT_CELL_VOLTAGE = 3.4
+
+
 MAX_VOLTAGE_TIME_SEC = 15*60
 SOC_LEVEL_TO_RESET_VOLTAGE_LIMIT = 90
 
@@ -60,10 +54,22 @@ SOC_LEVEL_TO_RESET_VOLTAGE_LIMIT = 90
 MAX_BATTERY_CURRENT = 250.0 # manne: 100
 # MAX_BATTERY_DISCHARGE_CURRENT = 60.0
 MAX_BATTERY_DISCHARGE_CURRENT = 250.0 # manne: 100
+
+
+#
+# CCCM, CVL, CCL, DCL, CVCL
+# 
 # Charge current control management enable (True/False). 
-CCCM_ENABLE = True
+CCCM_ENABLE = False
 # Charge voltage control management enable (True/False). 
-CVCM_ENABLE = False
+CVCM_ENABLE = True
+# Cell min/max voltages - used with the cell count to get the min/max battery voltage
+MIN_CELL_VOLTAGE = 3.0
+# pv charger control
+MAX_CELL_VOLTAGE = 3.45                       # CVCM_ENABLE max charging voltage
+FLOAT_CELL_VOLTAGE = MAX_CELL_VOLTAGE - 0.05  # float cell voltage
+
+
 # Simulate Midpoint graph (True/False). 
 MIDPOINT_ENABLE = False
 
