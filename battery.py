@@ -104,6 +104,13 @@ class Battery(object):
     def manage_charge_voltage(self):
         voltageSum = 0
         if (CVCM_ENABLE):
+
+            logging.info(f"num voltages: {len(self.cells)}")
+
+            if len(self.cells) < self.cell_count:
+                logging.info(f"incomplete cell data...: {len(self.cells)}")
+                return
+
             for i in range(self.cell_count):
                 voltage = self.cells[i].voltage
                 if voltage:
@@ -114,7 +121,7 @@ class Battery(object):
             # Mod erri
             #
             # MIN_CELL_VOLTAGE = 3.0
-            # RECONNECTCELLVOLTAGE = 3.275 # about 50% SOC, note: inverter will reconnect at 52v
+            RECONNECTCELLVOLTAGE = 3.275 # about 50% SOC, note: inverter will reconnect at 52v
 
             # MAX_CELL_VOLTAGE = 3.45
             # FLOAT_CELL_VOLTAGE = MAX_CELL_VOLTAGE - 0.05
@@ -125,22 +132,22 @@ class Battery(object):
             if minCellVoltage != None:
 
                 # disconnect from battery if a cell voltage is below min voltage
-                if minCellVoltage < MIN_CELL_VOLTAGE and self.inverterControl.isOn(): # xxx hardcoded
+                if minCellVoltage < MIN_CELL_VOLTAGE: #  and self.inverterControl.isOn(): # xxx hardcoded
 
                     logging.info("xxx how to control inverter?")
 
                     # turn off inverter
                     logging.info(f"turn off inverter, pack voltage: {voltageSum}")
-                    self.inverterControl.turnOff()
+                    # self.inverterControl.turnOff()
 
                 # re-connect to battery if all cells are above min voltage
-                if minCellVoltage > RECONNECTCELLVOLTAGE and not self.inverterControl.isOn(): # xxx about 50% SOC, hardcoded
+                if minCellVoltage > RECONNECTCELLVOLTAGE: #  and not self.inverterControl.isOn(): # xxx about 50% SOC, hardcoded
 
                     logging.info("xxx how to control inverter?")
 
                     # turn on inverter
                     logging.info(f"turn on inverter, pack voltage: {voltageSum}")
-                    self.inverterControl.turnOn()
+                    # self.inverterControl.turnOn()
 
             maxCellVoltage = self.get_max_cell_voltage()
             logging.info(f"maxCellVoltage: {maxCellVoltage}, MAX_CELL_VOLTAGE: {MAX_CELL_VOLTAGE}v, FLOAT_CELL_VOLTAGE: {FLOAT_CELL_VOLTAGE}v")
