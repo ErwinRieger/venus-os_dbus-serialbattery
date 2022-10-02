@@ -105,17 +105,14 @@ class Battery(object):
         voltageSum = 0
         if (CVCM_ENABLE):
 
-            logging.info(f"num voltages: {len(self.cells)}")
-
             if len(self.cells) < self.cell_count:
-                logging.info(f"incomplete cell data...: {len(self.cells)}")
+                logging.warning(f"incomplete cell data...: {len(self.cells)}")
                 return
 
             for i in range(self.cell_count):
                 voltage = self.cells[i].voltage
                 if voltage:
                     voltageSum+=voltage
-
 
             #
             # Mod erri
@@ -127,30 +124,28 @@ class Battery(object):
             # FLOAT_CELL_VOLTAGE = MAX_CELL_VOLTAGE - 0.05
 
             minCellVoltage = self.get_min_cell_voltage()
-            logging.info(f"minCellVoltage: {minCellVoltage}v, MIN_CELL_VOLTAGE: {MIN_CELL_VOLTAGE}v, RECONNECTCELLVOLTAGE: {RECONNECTCELLVOLTAGE}v")
+            logging.warning(f"\nminCellVoltage: {minCellVoltage}v, MIN_CELL_VOLTAGE: {MIN_CELL_VOLTAGE}v, RECONNECTCELLVOLTAGE: {RECONNECTCELLVOLTAGE}v")
 
             if minCellVoltage != None:
 
                 # disconnect from battery if a cell voltage is below min voltage
                 if minCellVoltage < MIN_CELL_VOLTAGE: #  and self.inverterControl.isOn(): # xxx hardcoded
 
-                    logging.info("xxx how to control inverter?")
-
                     # turn off inverter
-                    logging.info(f"turn off inverter, pack voltage: {voltageSum}")
+                    logging.warning(f"turn off inverter, pack voltage: {voltageSum}")
                     # self.inverterControl.turnOff()
+                    self.min_battery_voltage = voltageSum + 1 + 0.05
 
                 # re-connect to battery if all cells are above min voltage
                 if minCellVoltage > RECONNECTCELLVOLTAGE: #  and not self.inverterControl.isOn(): # xxx about 50% SOC, hardcoded
 
-                    logging.info("xxx how to control inverter?")
-
                     # turn on inverter
-                    logging.info(f"turn on inverter, pack voltage: {voltageSum}")
+                    logging.warning(f"turn on inverter, pack voltage: {voltageSum}")
                     # self.inverterControl.turnOn()
+                    self.min_battery_voltage = MIN_CELL_VOLTAGE * self.cell_count + 0.05
 
             maxCellVoltage = self.get_max_cell_voltage()
-            logging.info(f"maxCellVoltage: {maxCellVoltage}, MAX_CELL_VOLTAGE: {MAX_CELL_VOLTAGE}v, FLOAT_CELL_VOLTAGE: {FLOAT_CELL_VOLTAGE}v")
+            logging.warning(f"maxCellVoltage: {maxCellVoltage}, MAX_CELL_VOLTAGE: {MAX_CELL_VOLTAGE}v, FLOAT_CELL_VOLTAGE: {FLOAT_CELL_VOLTAGE}v")
 
             if maxCellVoltage != None:
 
@@ -160,19 +155,19 @@ class Battery(object):
                 if maxCellVoltage > MAX_CELL_VOLTAGE:
                     # freeze charging voltage
                     chargevoltage = voltageSum
-                    logging.info(f"throttling charger, pack voltage: {chargevoltage}")
+                    logging.warning(f"throttling charger, pack voltage: {chargevoltage}")
             
                 # start charging if all cells below 3.4v
                 elif maxCellVoltage < FLOAT_CELL_VOLTAGE:
                     chargevoltage = 55.2 # 3.345 v per cell
-                    logging.info(f"un-throttling charger, pack voltage: {voltageSum}")
+                    logging.warning(f"un-throttling charger, pack voltage: {voltageSum}")
 
-            # logging.info(f"setting mppt.ChargeVoltage: {self.packVolt}")
+            # logging.warning(f"setting mppt.ChargeVoltage: {self.packVolt}")
             # self._dbusmonitor.set_value(self.pv_charger, "/Link/ChargeVoltage", self.packVolt) # value stays for 60 minutes
 
             # self.control_voltage = MAX_CELL_VOLTAGE * self.cell_count
-            logging.info(f"setting control_voltage: {chargevoltage}")
-            self.control_voltage = chargevoltage
+            logging.warning(f"setting control_voltage: {chargevoltage}, min_battery_voltage: {self.min_battery_voltage}")
+            self.control_voltage = chargevoltage - 0.05
 
             return
 
