@@ -86,6 +86,9 @@ class MNB(Battery):
         self.get_settings()
         init_max(self)
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> Update serialbattery code, includes our daly.py changes.
 
         result = False
         try:
@@ -94,9 +97,12 @@ class MNB(Battery):
             pass
 
         return result
+<<<<<<< HEAD
 =======
         return self.read_status_data()
 >>>>>>> Importing.
+=======
+>>>>>>> Update serialbattery code, includes our daly.py changes.
 
     def get_settings(self):  # imutable constants for the battery
         # Need to include this in BMS initialisation

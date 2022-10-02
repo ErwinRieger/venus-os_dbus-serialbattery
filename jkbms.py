@@ -23,6 +23,9 @@ class Jkbms(Battery):
         # The result or call should be unique to this BMS. Battery name or version, etc.
         # Return True if success, False for failure
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> Update serialbattery code, includes our daly.py changes.
         result = False
         try:
             result = self.read_status_data()
@@ -30,9 +33,12 @@ class Jkbms(Battery):
             pass
 
         return result
+<<<<<<< HEAD
 =======
         return self.read_status_data()
 >>>>>>> Importing.
+=======
+>>>>>>> Update serialbattery code, includes our daly.py changes.
 
     def get_settings(self):
         # After successful  connection get_settings will be call to set up the battery.
@@ -119,6 +125,7 @@ class Jkbms(Battery):
 
         offset = cellbyte_count + 155
 <<<<<<< HEAD
+<<<<<<< HEAD
         self.production = unpack_from('>8s', self.get_data(status_data, b'\xB4', offset, 8))[0].decode()
         offset = cellbyte_count + 174
         self.version = unpack_from('>15s', self.get_data(status_data, b'\xB7', offset, 15))[0].decode()
@@ -127,6 +134,11 @@ class Jkbms(Battery):
         offset = cellbyte_count + 174
         self.version = unpack_from('>15s', self.get_data(status_data, b'\xB7', offset, 15))[0]
 >>>>>>> Importing.
+=======
+        self.production = unpack_from('>8s', self.get_data(status_data, b'\xB4', offset, 8))[0].decode()
+        offset = cellbyte_count + 174
+        self.version = unpack_from('>15s', self.get_data(status_data, b'\xB7', offset, 15))[0].decode()
+>>>>>>> Update serialbattery code, includes our daly.py changes.
 
         # logger.info(self.hardware_version)
         return True

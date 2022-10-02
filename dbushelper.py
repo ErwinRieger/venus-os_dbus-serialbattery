@@ -53,11 +53,16 @@ class DbusHelper:
         # This is only called once when a battery is initiated
         self.setup_instance()
 <<<<<<< HEAD
+<<<<<<< HEAD
         short_port = self.battery.port[self.battery.port.rfind('/') + 1:]
         logger.info("%s" % ("com.victronenergy.battery." + short_port))
 =======
         logger.info("%s" % ("com.victronenergy.battery." + self.battery.port[self.battery.port.rfind('/') + 1:]))
 >>>>>>> Importing.
+=======
+        short_port = self.battery.port[self.battery.port.rfind('/') + 1:]
+        logger.info("%s" % ("com.victronenergy.battery." + short_port))
+>>>>>>> Update serialbattery code, includes our daly.py changes.
 
         # Get the settings for the battery
         if not self.battery.get_settings():
@@ -72,10 +77,14 @@ class DbusHelper:
         self._dbusservice.add_path('/DeviceInstance', self.instance)
         self._dbusservice.add_path('/ProductId', 0x0)
 <<<<<<< HEAD
+<<<<<<< HEAD
         self._dbusservice.add_path('/ProductName', 'SerialBattery(' + self.battery.type + ') v' +
 =======
         self._dbusservice.add_path('/ProductName', 'SerialBattery (' + self.battery.type + ') v' +
 >>>>>>> Importing.
+=======
+        self._dbusservice.add_path('/ProductName', 'SerialBattery(' + self.battery.type + ') v' +
+>>>>>>> Update serialbattery code, includes our daly.py changes.
                                    str(DRIVER_VERSION) + DRIVER_SUBVERSION)
         self._dbusservice.add_path('/FirmwareVersion', self.battery.version)
         self._dbusservice.add_path('/HardwareVersion', self.battery.hardware_version)
@@ -95,10 +104,14 @@ class DbusHelper:
         self._dbusservice.add_path('/System/NrOfModulesBlockingCharge', None, writeable=True)
         self._dbusservice.add_path('/System/NrOfModulesBlockingDischarge', None, writeable=True)
 <<<<<<< HEAD
+<<<<<<< HEAD
         self._dbusservice.add_path('/Capacity', self.battery.get_capacity_remain(), writeable=True,
 =======
         self._dbusservice.add_path('/Capacity', self.battery.capacity_remain, writeable=True,
 >>>>>>> Importing.
+=======
+        self._dbusservice.add_path('/Capacity', self.battery.get_capacity_remain(), writeable=True,
+>>>>>>> Update serialbattery code, includes our daly.py changes.
                                    gettextcallback=lambda p, v: "{:0.2f}Ah".format(v))
         self._dbusservice.add_path('/InstalledCapacity', self.battery.capacity, writeable=True,
                                    gettextcallback=lambda p, v: "{:0.0f}Ah".format(v))
@@ -185,6 +198,9 @@ class DbusHelper:
             # This is to mannage CCL\DCL
             self.battery.manage_charge_current()
             
+            # This is to mannage CVCL
+            self.battery.manage_charge_voltage()            
+            
             # publish all the data fro the battery object to dbus
             self.publish_dbus()
 
@@ -202,6 +218,7 @@ class DbusHelper:
         self._dbusservice['/Dc/0/Power'] = round(self.battery.voltage * self.battery.current, 2)
         self._dbusservice['/Dc/0/Temperature'] = self.battery.get_temp()
 <<<<<<< HEAD
+<<<<<<< HEAD
         self._dbusservice['/Capacity'] = self.battery.get_capacity_remain()
         self._dbusservice['/ConsumedAmphours'] = 0 if self.battery.capacity is None or \
                                 self.battery.get_capacity_remain() is None else \
@@ -212,6 +229,12 @@ class DbusHelper:
                                 self.battery.capacity_remain is None else \
                                 self.battery.capacity - self.battery.capacity_remain
 >>>>>>> Importing.
+=======
+        self._dbusservice['/Capacity'] = self.battery.get_capacity_remain()
+        self._dbusservice['/ConsumedAmphours'] = 0 if self.battery.capacity is None or \
+                                self.battery.get_capacity_remain() is None else \
+                                self.battery.capacity - self.battery.get_capacity_remain()
+>>>>>>> Update serialbattery code, includes our daly.py changes.
         
         midpoint, deviation = self.battery.get_midvoltage()
         if (midpoint is not None):
@@ -237,6 +260,9 @@ class DbusHelper:
         self._dbusservice['/Info/MaxChargeCurrent'] = self.battery.control_charge_current
         self._dbusservice['/Info/MaxDischargeCurrent'] = self.battery.control_discharge_current
 
+        # Voltage control
+        self._dbusservice['/Info/MaxChargeVoltage'] = self.battery.control_voltage
+        
         # Updates from cells
         self._dbusservice['/System/MinVoltageCellId'] = self.battery.get_min_cell_desc()
         self._dbusservice['/System/MaxVoltageCellId'] = self.battery.get_max_cell_desc()
@@ -261,6 +287,9 @@ class DbusHelper:
         #cell voltages
         if (BATTERY_CELL_DATA_FORMAT>0):
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> Update serialbattery code, includes our daly.py changes.
             try:
                 voltageSum = 0
                 for i in range(self.battery.cell_count):
@@ -276,6 +305,7 @@ class DbusHelper:
                 self._dbusservice['/%s/Diff'%pathbase] = self.battery.get_max_cell_voltage() - self.battery.get_min_cell_voltage()
             except:
                 pass
+<<<<<<< HEAD
 
         # Update TimeToSoC
         try:
@@ -303,18 +333,31 @@ class DbusHelper:
             pathbase = 'Cell' if (BATTERY_CELL_DATA_FORMAT & 2) else 'Voltages'
             self._dbusservice['/%s/Sum'%pathbase] = voltageSum
             self._dbusservice['/%s/Diff'%pathbase] = self.battery.get_max_cell_voltage() - self.battery.get_min_cell_voltage()
+=======
+>>>>>>> Update serialbattery code, includes our daly.py changes.
 
         # Update TimeToSoC
-        if self.battery.capacity is not None and len(TIME_TO_SOC_POINTS) > 0 and self.battery.time_to_soc_update == 0:
-            self.battery.time_to_soc_update = TIME_TO_SOC_LOOP_CYCLES
-            crntPrctPerSec = (abs(self.battery.current / (self.battery.capacity / 100)) / 3600)
+        try:
+            if self.battery.capacity is not None and len(TIME_TO_SOC_POINTS) > 0 and self.battery.time_to_soc_update == 0:
+                self.battery.time_to_soc_update = TIME_TO_SOC_LOOP_CYCLES
+                crntPrctPerSec = (abs(self.battery.current / (self.battery.capacity / 100)) / 3600)
 
+<<<<<<< HEAD
             for num in TIME_TO_SOC_POINTS:
                 self._dbusservice['/TimeToSoC/' + str(num)] = self.battery.get_timetosoc(num, crntPrctPerSec) if self.battery.current else None
             
         else:
             self.battery.time_to_soc_update -= 1
 >>>>>>> Importing.
+=======
+                for num in TIME_TO_SOC_POINTS:
+                    self._dbusservice['/TimeToSoC/' + str(num)] = self.battery.get_timetosoc(num, crntPrctPerSec) if self.battery.current else None
+                
+            else:
+                self.battery.time_to_soc_update -= 1
+        except:
+            pass
+>>>>>>> Update serialbattery code, includes our daly.py changes.
 
         logger.debug("logged to dbus [%s]"%str(round(self.battery.soc, 2)))
         self.battery.log_cell_data()

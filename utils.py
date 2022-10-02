@@ -13,6 +13,7 @@ logger.setLevel(logging.INFO)
 # Constants - Need to dynamically get them in future
 DRIVER_VERSION = 0.12
 <<<<<<< HEAD
+<<<<<<< HEAD
 DRIVER_SUBVERSION = 'b3'
 =======
 DRIVER_SUBVERSION = ''
@@ -38,15 +39,38 @@ BATTERY_CAPACITY = 50
 INVERT_CURRENT_MEASUREMENT = 1
 =======
 MAX_CELL_VOLTAGE = 3.5
+=======
+DRIVER_SUBVERSION = 'b3'
+zero_char = chr(48)
+degree_sign = u'\N{DEGREE SIGN}'
+# Cell min/max voltages - used with the cell count to get the min/max battery voltage
+# MIN_CELL_VOLTAGE = 2.9
+MIN_CELL_VOLTAGE = 2.55
+# MAX_CELL_VOLTAGE = 3.45
+# MAX_CELL_VOLTAGE = 3.50
+MAX_CELL_VOLTAGE = 3.55
+# FLOAT_CELL_VOLTAGE = 3.35
+FLOAT_CELL_VOLTAGE = 3.4
+MAX_VOLTAGE_TIME_SEC = 15*60
+SOC_LEVEL_TO_RESET_VOLTAGE_LIMIT = 90
+
+>>>>>>> Update serialbattery code, includes our daly.py changes.
 # battery Current limits
-MAX_BATTERY_CURRENT = 250.0
-MAX_BATTERY_DISCHARGE_CURRENT = 250.0
+# MAX_BATTERY_CURRENT = 50.0
+MAX_BATTERY_CURRENT = 250.0 # manne: 100
+# MAX_BATTERY_DISCHARGE_CURRENT = 60.0
+MAX_BATTERY_DISCHARGE_CURRENT = 250.0 # manne: 100
 # Charge current control management enable (True/False). 
 CCCM_ENABLE = True
+# Charge voltage control management enable (True/False). 
+CVCM_ENABLE = False
+# Simulate Midpoint graph (True/False). 
+MIDPOINT_ENABLE = False
 
 # Daly settings
 # Battery capacity (amps) if the BMS does not support reading it 
-BATTERY_CAPACITY = 450
+# BATTERY_CAPACITY = 50
+BATTERY_CAPACITY = 450 # manne: 75
 # Invert Battery Current. Default non-inverted. Set to -1 to invert
 INVERT_CURRENT_MEASUREMENT = -1
 >>>>>>> Importing.
@@ -75,13 +99,19 @@ TIME_TO_SOC_INC_FROM = False
 BATTERY_CELL_DATA_FORMAT = 1
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> Update serialbattery code, includes our daly.py changes.
 # Settings for ESC GreenMeter and Lipro devices
 GREENMETER_ADDRESS = 1
 # LIPRO_START_ADDRESS = 2
 # LIPRO_END_ADDRESS = 4
 LIPRO_CELL_COUNT = 15
+<<<<<<< HEAD
 =======
 >>>>>>> Importing.
+=======
+>>>>>>> Update serialbattery code, includes our daly.py changes.
 
 def is_bit_set(tmp):
     return False if tmp == zero_char else True
@@ -174,4 +204,3 @@ def read_serialport_data(ser, command, length_pos, length_check, length_fixed=No
     except serial.SerialException as e:
         logger.error(e)
         return False
-        

@@ -25,6 +25,9 @@ class Ant(Battery):
         # The result or call should be unique to this BMS. Battery name or version, etc.
         # Return True if success, False for failure
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> Update serialbattery code, includes our daly.py changes.
         result = False
         try:
             result = self.read_status_data()
@@ -32,9 +35,12 @@ class Ant(Battery):
             pass
 
         return result
+<<<<<<< HEAD
 =======
         return self.read_status_data()
 >>>>>>> Importing.
+=======
+>>>>>>> Update serialbattery code, includes our daly.py changes.
 
     def get_settings(self):
         # After successful  connection get_settings will be call to set up the battery.

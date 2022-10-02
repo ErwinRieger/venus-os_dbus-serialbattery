@@ -60,11 +60,15 @@ class LltJbd(Battery):
 
     def test_connection(self):
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> Update serialbattery code, includes our daly.py changes.
         result = False
         try:
             result = self.read_hardware_data()
         except:
             pass
+<<<<<<< HEAD
 
         return result
         
@@ -72,6 +76,11 @@ class LltJbd(Battery):
         return self.read_hardware_data()
 
 >>>>>>> Importing.
+=======
+
+        return result
+        
+>>>>>>> Update serialbattery code, includes our daly.py changes.
     def get_settings(self):
         self.read_gen_data()
         self.max_battery_current = MAX_BATTERY_CURRENT
@@ -172,10 +181,14 @@ class LltJbd(Battery):
             return False
 
 <<<<<<< HEAD
+<<<<<<< HEAD
         self.hardware_version = unpack_from('>' + str(len(hardware_data)) + 's', hardware_data)[0].decode()
 =======
         self.hardware_version = unpack_from('>' + str(len(hardware_data)) + 's', hardware_data)[0]
 >>>>>>> Importing.
+=======
+        self.hardware_version = unpack_from('>' + str(len(hardware_data)) + 's', hardware_data)[0].decode()
+>>>>>>> Update serialbattery code, includes our daly.py changes.
         logger.debug(self.hardware_version)
         return True
 

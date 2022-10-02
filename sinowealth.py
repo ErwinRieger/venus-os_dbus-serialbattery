@@ -34,6 +34,9 @@ class Sinowealth(Battery):
 
     def test_connection(self):
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> Update serialbattery code, includes our daly.py changes.
         result = False
         try:
             result = self.read_status_data()
@@ -42,12 +45,15 @@ class Sinowealth(Battery):
         except:
             pass
         return result
+<<<<<<< HEAD
 =======
        result = self.read_status_data()
        result = result and self.read_remaining_capacity()
        result = result and self.read_pack_config_data()
        return result
 >>>>>>> Importing.
+=======
+>>>>>>> Update serialbattery code, includes our daly.py changes.
 
     def get_settings(self):
         # hardcoded parameters, to be requested from the BMS in the future
