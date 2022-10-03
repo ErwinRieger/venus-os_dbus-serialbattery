@@ -67,7 +67,8 @@ CVCM_ENABLE = True
 MIN_CELL_VOLTAGE = 3.0
 # pv charger control
 MAX_CELL_VOLTAGE = 3.45                       # CVCM_ENABLE max charging voltage
-FLOAT_CELL_VOLTAGE = MAX_CELL_VOLTAGE - 0.05  # float cell voltage
+# FLOAT_CELL_VOLTAGE = MAX_CELL_VOLTAGE - 0.05  # float cell voltage
+FLOAT_CELL_VOLTAGE = MAX_CELL_VOLTAGE - 0.025  # float cell voltage
 
 
 # Simulate Midpoint graph (True/False). 
