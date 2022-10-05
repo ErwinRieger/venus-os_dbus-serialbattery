@@ -106,23 +106,21 @@ class Battery(object):
         if (CVCM_ENABLE):
 
             if len(self.cells) < self.cell_count:
+                # Handle case when not all data is available on startup
                 logging.warning(f"incomplete cell data...: {len(self.cells)}")
                 return
 
+            aboveVolt = 0
             for i in range(self.cell_count):
                 voltage = self.cells[i].voltage
                 if voltage:
                     voltageSum+=voltage
+                    if voltage > FLOAT_CELL_VOLTAGE:
+                        aboveVolt += voltage - FLOAT_CELL_VOLTAGE
 
             #
             # Mod erri
             #
-            # MIN_CELL_VOLTAGE = 3.0
-            RECONNECTCELLVOLTAGE = 3.275 # about 50% SOC, note: inverter will reconnect at 52v
-
-            # MAX_CELL_VOLTAGE = 3.45
-            # FLOAT_CELL_VOLTAGE = MAX_CELL_VOLTAGE - 0.05
-
             minCellVoltage = self.get_min_cell_voltage()
             maxCellVoltage = self.get_max_cell_voltage()
 
@@ -148,12 +146,15 @@ class Battery(object):
                     logging.warning(f"turn on inverter")
                     # self.inverterControl.turnOn()
                     # self.min_battery_voltage = MIN_CELL_VOLTAGE * self.cell_count + 0.05
-                    self.control_discharge_current = self.max_battery_discharge_current - 5 # turn on inverter
+                    self.control_discharge_current = self.max_battery_discharge_current # turn on inverter
 
             if maxCellVoltage != None:
 
                 # chargevoltage = self.cell_count * MAX_CELL_VOLTAGE
-                chargevoltage = self.cell_count * FLOAT_CELL_VOLTAGE
+                # chargevoltage = self.cell_count * FLOAT_CELL_VOLTAGE
+                chargevoltage = min(
+                        voltageSum - aboveVolt,
+                        self.cell_count * FLOAT_CELL_VOLTAGE)
 
                 # # stop charging if a cell voltage is above 3.45v
                 # if maxCellVoltage > MAX_CELL_VOLTAGE:
@@ -169,11 +170,7 @@ class Battery(object):
                     chargevoltage = MAX_CELL_VOLTAGE * self.cell_count
                     logging.warning(f"un-throttling charger")
 
-            # logging.warning(f"setting mppt.ChargeVoltage: {self.packVolt}")
-            # self._dbusmonitor.set_value(self.pv_charger, "/Link/ChargeVoltage", self.packVolt) # value stays for 60 minutes
-
-            # self.control_voltage = MAX_CELL_VOLTAGE * self.cell_count
-            logging.warning(f"setting control_voltage: {chargevoltage:.3f}V, control_discharge_current: {self.control_discharge_current:.1f}A")
+            logging.warning(f"setting control_voltage: {chargevoltage:.3f}V, control_discharge_current: {self.control_discharge_current:.1f}A, aboveVolt: {aboveVolt:.3f}V")
             self.control_voltage = chargevoltage
 
             return
