@@ -96,7 +96,7 @@ class DbusHelper:
                                    gettextcallback=lambda p, v: "{:0.2f}V".format(v))
         self._dbusservice.add_path('/Info/MaxChargeCurrent', self.battery.max_battery_current, writeable=True,
                                    gettextcallback=lambda p, v: "{:0.2f}A".format(v))
-        self._dbusservice.add_path('/Info/MaxDischargeCurrent', self.battery.max_battery_discharge_current,
+        self._dbusservice.add_path('/Info/MaxDischargeCurrent', self.battery.control_discharge_current, # self.battery.max_battery_discharge_current,
                                    writeable=True, gettextcallback=lambda p, v: "{:0.2f}A".format(v))
         self._dbusservice.add_path('/System/NrOfCellsPerBattery', self.battery.cell_count, writeable=True)
         self._dbusservice.add_path('/System/NrOfModulesOnline', 1, writeable=True)
