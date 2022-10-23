@@ -111,22 +111,22 @@ class Daly(Battery):
                 # ## inverter bms lost
                 # self.control_discharge_current = 0.0 
             # else:
-                # self.control_discharge_current = i
+            self.control_discharge_current = self.initial_i
 
             self.initial_s = self.dbusmonitor.get_value(self.vecan_service, "/State")
             logger.info(f"current inverter state: {self.initial_s}")
 
-            if self.initial_s == 9:
-                # inverting
-                if self.initial_i == 0.0:
-                    return False # restart
+            # if self.initial_s == 9:
+                # # inverting
+                # if self.initial_i == 0.0:
+                    # return False # restart
 
-                if self.initial_i == None:
-                    logger.info(f"switch off inverter...")
-                    self.control_discharge_current = 0.0
-                else:
-                    logger.info(f"set initial discharge current: {self.initial_i}")
-                    self.control_discharge_current = self.initial_i
+                # if self.initial_i == None:
+                    # logger.info(f"switch off inverter...")
+                    # self.control_discharge_current = 0.0
+                # else:
+                    # logger.info(f"set initial discharge current: {self.initial_i}")
+                    # self.control_discharge_current = self.initial_i
 
         except:
             logger.info(f"get_settings(): error reading inverter current")
