@@ -4,7 +4,10 @@ from battery import Protection, Battery, Cell
 from utils import *
 from struct import *
 
+from dbusmonitor import DbusMonitor
+
 import time, os
+import traceback
 
 SocStorage = "/data/db/capacity.dat"
 SocStorageInterval = 60
@@ -81,13 +84,74 @@ class Daly(Battery):
         self.max_battery_current = MAX_BATTERY_CURRENT
         self.max_battery_discharge_current = MAX_BATTERY_DISCHARGE_CURRENT
 
+        # self.control_discharge_current = self.max_battery_discharge_current
+        # self.control_discharge_current = 0.0
+        # self.control_discharge_current = None
+
+        try:
+
+            # xxx query initial battery discharge current from inverter
+            dummy = {'code': None, 'whenToLog': 'configChange', 'accessLevel': None}
+            dbus_tree = {
+                    'com.victronenergy.inverter': { '/State': dummy, '/Link/DischargeCurrent': dummy }  ,
+            }
+            self.dbusmonitor = DbusMonitor(dbus_tree)
+
+            serviceList = self._get_service_having_lowest_instance('com.victronenergy.inverter')
+            if not serviceList:
+                # Restart process
+                logger.info("service com.victronenergy.inverter not registered yet, exiting...")
+                sys.exit(0)
+            self.vecan_service = serviceList[0]
+            logger.info("service of inverter rs6: " +  self.vecan_service)
+
+            self.initial_i = self.dbusmonitor.get_value(self.vecan_service, "/Link/DischargeCurrent")
+            logger.info(f"current discharge current setting: {self.initial_i}")
+            # if i == None:
+                # ## inverter bms lost
+                # self.control_discharge_current = 0.0 
+            # else:
+                # self.control_discharge_current = i
+
+            self.initial_s = self.dbusmonitor.get_value(self.vecan_service, "/State")
+            logger.info(f"current inverter state: {self.initial_s}")
+
+            if self.initial_s == 9:
+                # inverting
+                if self.initial_i == 0.0:
+                    return False # restart
+
+                if self.initial_i == None:
+                    logger.info(f"switch off inverter...")
+                    self.control_discharge_current = 0.0
+                else:
+                    logger.info(f"set initial discharge current: {self.initial_i}")
+                    self.control_discharge_current = self.initial_i
+
+        except:
+            logger.info(f"get_settings(): error reading inverter current")
+            traceback.print_exc()
+            return False
+
         try:
             self.capacity_remain = float(open(SocStorage).read())
         except:
-            logger.warning(f"get_settings(): error reading {SocStorage}")
+            logger.info(f"get_settings(): error reading {SocStorage}")
 
         logger.info(f"get_settings(): start capacity: {self.capacity_remain} Ah")
         return True
+
+    # returns a tuple (servicename, instance)
+    def _get_service_having_lowest_instance(self, classfilter=None): 
+        services = self._get_connected_service_list(classfilter=classfilter)
+        if len(services) == 0: return None
+        s = sorted((value, key) for (key, value) in services.items())
+        return (s[0][1], s[0][0])
+
+    def _get_connected_service_list(self, classfilter=None):
+        services = self.dbusmonitor.get_service_list(classfilter=classfilter)
+        # self._remove_unconnected_services(services)
+        return services
 
     def refresh_data(self):
         result = False
