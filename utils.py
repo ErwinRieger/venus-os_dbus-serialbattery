@@ -157,12 +157,31 @@ def open_serial_port(port, baud):
             
     return ser
 
+def read_serial_garbage(ser, when):
+    l = ser.inWaiting()
+    while l:
+        logger.info(f"read_serial_garbage ({when}): {l} bytes available...")
+        try:
+            res = ser.read(l)
+        except serial.SerialException as e:
+            logger.error(f"read_serial_garbage(): error reading, ignoring...")
+            logger.error(e)
+            l = ser.inWaiting()
+            continue
+        logger.info(f"read_serial_garbage: read {len(res)} bytes ...")
+        sleep(0.1)
+        l = ser.inWaiting()
+
 # Read data from previously openned serial port
 def read_serialport_data(ser, command, length_pos, length_check, length_fixed=None, length_size=None):
+    read_serial_garbage(ser, "before");
     try:
-        ser.flushOutput()
-        ser.flushInput()
+        # ser.flushOutput()
+        # ser.flushInput()
+        # read_serial_garbage(ser);
+
         ser.write(command)
+        ser.flushOutput()
 
         length_byte_size = 1
         if length_size is not None: 
@@ -178,7 +197,7 @@ def read_serialport_data(ser, command, length_pos, length_check, length_fixed=No
             sleep(0.005)
             toread = ser.inWaiting()
             count += 1
-            if count > 50:
+            if count > 150:
                 logger.error(">>> ERROR: No reply - returning")
                 return False
                 
@@ -198,7 +217,7 @@ def read_serialport_data(ser, command, length_pos, length_check, length_fixed=No
         count = 0
         data = bytearray(res)
         while len(data) <= length + length_check:
-            res = ser.read(length + length_check)
+            res = ser.read((length + length_check) - len(data) + 1)
             data.extend(res)
             #logger.info('serial data length ' + str(len(data)))
             sleep(0.005)
@@ -207,8 +226,13 @@ def read_serialport_data(ser, command, length_pos, length_check, length_fixed=No
                 logger.error(">>> ERROR: No reply - returning [len:" + str(len(data)) + "/" + str(length + length_check) + "]")
                 return False
 
+        sleep(0.1)
+        read_serial_garbage(ser, "after");
         return data
 
     except serial.SerialException as e:
         logger.error(e)
         return False
+
+
+

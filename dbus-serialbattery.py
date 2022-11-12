@@ -151,7 +151,8 @@ def main():
 
 >>>>>>> Importing.
     # Poll the battery at INTERVAL and run the main loop
-    gobject.timeout_add(battery.poll_interval, lambda: poll_battery(mainloop))
+    # gobject.timeout_add(battery.poll_interval, lambda: poll_battery(mainloop))
+    gobject.timeout_add(battery.poll_interval, lambda: helper.publish_battery(mainloop))
     try:
         mainloop.run()
     except KeyboardInterrupt:

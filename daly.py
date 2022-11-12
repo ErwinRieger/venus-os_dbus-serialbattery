@@ -23,7 +23,7 @@ class Daly(Battery):
         self.cell_max_voltage = None
         self.cell_min_no = None
         self.cell_max_no = None
-        self.poll_interval = 1000
+        self.poll_interval = 2500 # 1000
         self.poll_step = 0
         self.type = self.BATTERYTYPE
 <<<<<<< HEAD
@@ -34,8 +34,13 @@ class Daly(Battery):
         # Mod erri
         self.capacity_remain = BATTERY_CAPACITY # * 0.66 # don't know real capacity
         self.lastSocTime = self.lastSocWrite = time.time()
+<<<<<<< HEAD
             
 >>>>>>> Importing.
+=======
+        self.ser = None # serial device handle
+
+>>>>>>> Improve serial read. Don't use a separate thread to read and publish
     # command bytes [StartFlag=A5][Address=40][Command=94][DataLength=8][8x zero bytes][checksum]
     command_base = b"\xA5\x40\x94\x08\x00\x00\x00\x00\x00\x00\x00\x00\x81"
     cellvolt_buffer = b"\xA5\x40\x94\x08\x00\x00\x00\x00\x00\x00\x00\x00\x82\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
@@ -58,6 +63,7 @@ class Daly(Battery):
         result = False
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 >>>>>>> Update serialbattery code, includes our daly.py changes.
         try:
@@ -76,6 +82,16 @@ class Daly(Battery):
 >>>>>>> Importing.
 =======
 >>>>>>> Update serialbattery code, includes our daly.py changes.
+=======
+        # try:
+        if 1:
+            self.ser = open_serial_port(self.port, self.baud_rate)
+            if self.ser is not None:
+                result = self.read_status_data(self.ser)
+                # ser.close()
+        # except:
+            # pass
+>>>>>>> Improve serial read. Don't use a separate thread to read and publish
 
         return result
 
@@ -124,8 +140,10 @@ class Daly(Battery):
         return services
 
     def refresh_data(self):
+        logger.info(f"refresh_data start...")
         result = False
         # Open serial port to be used for all data reads instead of openning multiple times 
+<<<<<<< HEAD
         ser = open_serial_port(self.port, self.baud_rate)
         if ser is not None:
             result = self.read_soc_data(ser)
@@ -143,16 +161,28 @@ class Daly(Battery):
 =======
 =======
             result = result and self.read_cell_voltage_range_data(ser)
+=======
+        # ser = open_serial_port(self.port, self.baud_rate)
+        if self.ser is not None:
+            result = self.read_soc_data(self.ser)
+            result = result and self.read_fed_data(self.ser)
+            result = result and self.read_cell_voltage_range_data(self.ser)
+>>>>>>> Improve serial read. Don't use a separate thread to read and publish
 
 >>>>>>> Update serialbattery code, includes our daly.py changes.
             if self.poll_step == 0:
+<<<<<<< HEAD
                 result = result and self.read_alarm_data(ser)
                 result = result and self.read_temperature_range_data(ser)
 <<<<<<< HEAD
 >>>>>>> Importing.
 =======
+=======
+                result = result and self.read_alarm_data(self.ser)
+                result = result and self.read_temperature_range_data(self.ser)
+>>>>>>> Improve serial read. Don't use a separate thread to read and publish
             elif self.poll_step == 1:
-                result = result and self.read_cells_volts(ser)
+                result = result and self.read_cells_volts(self.ser)
                             
 >>>>>>> Update serialbattery code, includes our daly.py changes.
             #else:          # A placeholder to remind this is the last step. Add any additional steps before here
@@ -161,15 +191,16 @@ class Daly(Battery):
 
             self.poll_step += 1
             
-            ser.close()
+            # ser.close()
 
+        logger.info(f"refresh_data end...")
         return result
 
     def read_status_data(self, ser):
         status_data = self.read_serial_data_daly(ser, self.command_status)
         # check if connection success
         if status_data is False:
-            logger.debug("read_status_data")
+            logger.debug("error serial read in read_status_data")
             return False
 
         self.cell_count, self.temp_sensors, self.charger_connected, self.load_connected, \
@@ -191,6 +222,7 @@ class Daly(Battery):
             soc_data = self.read_serial_data_daly(ser, self.command_soc)
             # check if connection success
             if soc_data is False:
+                logger.warning("read_soc_data(): error serial read")
                 return False
 
             voltage, tmp, current, soc = unpack_from('>hhhh', soc_data)
@@ -224,9 +256,15 @@ class Daly(Battery):
                     # Store current soc for restart
                     f = open(SocStorage+".new", "w")
                     f.write(f"{self.capacity_remain}")
+                    f.flush()
                     f.close()
-                    os.replace(SocStorage+".new", SocStorage)
-                    self.lastSocWrite = t
+
+                    try:
+                        os.replace(SocStorage+".new", SocStorage)
+                        self.lastSocWrite = t
+                    except FileNotFoundError:
+                        # why does that happen? do we need some sort of sync()?
+                        logger.error(f"Caught and ignoring FileNotFoundError when renaming {SocStorage+'.new'} to {SocStorage}!")
 
                 return True
                 
@@ -239,7 +277,7 @@ class Daly(Battery):
         alarm_data = self.read_serial_data_daly(ser, self.command_alarm)
         # check if connection success
         if alarm_data is False:
-            logger.warning("read_alarm_data")
+            logger.warning("read_alarm_data(): error serial read")
             return False
 
         al_volt, al_temp, al_crnt_soc, al_diff, \
@@ -357,8 +395,10 @@ class Daly(Battery):
 
             cells_volts_data = read_serialport_data(ser, buffer, self.LENGTH_POS, self.LENGTH_CHECK, lenFixed)
             if cells_volts_data is False:
-                logger.warning("No cell_volts_data in read_cells_volts")
+                logger.warning("read_cells_volts(): error serial read")
                 return False
+
+            logger.info(f"read {len(cells_volts_data)} of {lenFixed + self.LENGTH_CHECK}")
 
             frameCell = [0, 0, 0]
             lowMin = (MIN_CELL_VOLTAGE / 2)
@@ -417,15 +457,19 @@ class Daly(Battery):
                   for idx in range(3):
                     cellnum = ((frame - 1) * 3) + idx  # daly is 1 based, driver 0 based
                     if cellnum >= self.cell_count:
+                        logger.info(f"break on cellnum {cellnum}")
                         break
                     cellVoltage = frameCell[idx] / 1000
 
-                    # logger.info(f"Read cell voltage: {cellVoltage}")
+                    logger.info(f"Read cell voltageof cell {cellnum}: {cellVoltage}")
 
                     self.cells[cellnum].voltage = None if cellVoltage < lowMin else cellVoltage
                   bufIdx += 10 # BBBBBhhh -> 11 byte
                 bufIdx += 1
 >>>>>>> Update serialbattery code, includes our daly.py changes.
+
+        else:
+                logger.warning("read_cells_volts(): no cell_count!")
 
         return True
 
@@ -433,7 +477,7 @@ class Daly(Battery):
         minmax_data = self.read_serial_data_daly(ser, self.command_minmax_cell_volts)
         # check if connection success
         if minmax_data is False:
-            logger.warning("read_cell_voltage_range_data")
+            logger.warning("read_cell_voltage_range_data(): error serial read")
             return False
 
         cell_max_voltage,self.cell_max_no,cell_min_voltage, self.cell_min_no = unpack_from('>hbhb', minmax_data)
@@ -449,7 +493,7 @@ class Daly(Battery):
         minmax_data = self.read_serial_data_daly(ser, self.command_minmax_temp)
         # check if connection success
         if minmax_data is False:
-            logger.debug("read_temperature_range_data")
+            logger.warning("read_temperature_range_data(): error serial read")
             return False
 
         max_temp,max_no,min_temp, min_no = unpack_from('>bbbb', minmax_data)
@@ -461,7 +505,7 @@ class Daly(Battery):
         fed_data = self.read_serial_data_daly(ser, self.command_fet)
         # check if connection success
         if fed_data is False:
-            logger.debug("read_fed_data")
+            logger.warning("read_fed_data(): error serial read")
             return False
 
         status, self.charge_fet, self.discharge_fet, bms_cycles, capacity_remain = unpack_from('>b??BL', fed_data)

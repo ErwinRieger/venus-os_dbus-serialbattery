@@ -107,7 +107,7 @@ class Battery(object):
 
             if len(self.cells) < self.cell_count:
                 # Handle case when not all data is available on startup
-                logger.info(f"incomplete cell data...: {len(self.cells)}")
+                logger.info(f"incomplete cell data...: {len(self.cells)} of {self.cell_count}")
                 return
 
             aboveVolt = 0

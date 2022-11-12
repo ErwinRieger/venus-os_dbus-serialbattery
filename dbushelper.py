@@ -176,12 +176,13 @@ class DbusHelper:
 
         # Create TimeToSoC items
         for num in TIME_TO_SOC_POINTS:
-            self._dbusservice.add_path('/TimeToSoC/' + str(num), None, writeable=True)
+            self._dbusservice.add_path('/TimeToSoC/' + str(num), None, writeable=Truesh_batteryg)
 
         return True
 
     def publish_battery(self, loop):
         # This is called every battery.poll_interval milli second as set up per battery type to read and update the data
+        logger.info(f"****************************** PUBLISH_BATTERY START *******************************\n")
         try:
             error_count = 0
             # Call the battery's refresh_data function
@@ -192,7 +193,7 @@ class DbusHelper:
             else:
                 error_count += 1
                 # If the battery is offline for more than 10 polls (polled every second for most batteries)
-                if error_count >= 10: 
+                if error_count >= 100: 
                     self.battery.online = False
 
             # This is to mannage CCL\DCL
@@ -205,8 +206,12 @@ class DbusHelper:
             self.publish_dbus()
 
         except:
+            logger.warning("publish_battery: caught exception...")
             traceback.print_exc()
-            loop.quit()
+            # loop.quit()
+
+        logger.info(f"publish_battery end...")
+        return True
 
     def publish_dbus(self):
 
