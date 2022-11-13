@@ -4,7 +4,7 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 from time import sleep
 from dbus.mainloop.glib import DBusGMainLoop
-from threading import Thread
+# from threading import Thread
 import dbus
 <<<<<<< HEAD
 <<<<<<< HEAD

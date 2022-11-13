@@ -6,7 +6,7 @@ from struct import *
 
 from dbusmonitor import DbusMonitor
 
-import time, os
+import time, os, math
 import traceback
 
 SocStorage = "/data/db/capacity.dat"
@@ -39,6 +39,7 @@ class Daly(Battery):
 >>>>>>> Importing.
 =======
         self.ser = None # serial device handle
+        self.daly_packet_length = 13
 
 >>>>>>> Improve serial read. Don't use a separate thread to read and publish
     # command bytes [StartFlag=A5][Address=40][Command=94][DataLength=8][8x zero bytes][checksum]
@@ -110,14 +111,16 @@ class Daly(Battery):
         serviceList = self._get_service_having_lowest_instance('com.victronenergy.inverter')
         if not serviceList:
             # Restart process
-            logger.info("service com.victronenergy.inverter not registered yet, exiting...")
-            sys.exit(0)
-        vecan_service = serviceList[0]
-        logger.info("service of inverter rs6: " +  vecan_service)
+            logger.info("service com.victronenergy.inverter not registered yet, can't get initial discharge current setting...")
+            # assuming rs6 is off:
+            self.control_discharge_current = 0
+        else:
+            vecan_service = serviceList[0]
+            logger.info("service of inverter rs6: " +  vecan_service)
 
-        i = self.dbusmonitor.get_value(vecan_service, "/Link/DischargeCurrent")
-        logger.info(f"current discharge current setting: {i}")
-        self.control_discharge_current = i
+            i = self.dbusmonitor.get_value(vecan_service, "/Link/DischargeCurrent")
+            logger.info(f"current discharge current setting: {i}")
+            self.control_discharge_current = i
 
         try:
             self.capacity_remain = float(open(SocStorage).read())
@@ -382,6 +385,98 @@ class Daly(Battery):
             buffer[1] = self.command_address[0]   # Always serial 40 or 80
             buffer[2] = self.command_cell_volts[0]
 
+            # maxFrame = (int(self.cell_count / 3) + 1)
+            nFrame = math.ceil(self.cell_count / 3)
+            # lenFixed = (nFrame * 12) # 0xA5, 0x01, 0x95, 0x08 + 1 byte frame + 6 byte data + 1byte reserved
+            lenFixed = nFrame * self.daly_packet_length
+
+            cells_volts_data = read_serialport_data_fixed(ser, buffer, lenFixed)
+            if cells_volts_data is False:
+                logger.warning("read_cells_volts(): error serial read")
+                return False
+
+            logger.info(f"read {len(cells_volts_data)} of {lenFixed}")
+
+
+            cellVoltages = self.cell_count * [0] # temp. buffer, don't set cell voltages if not all values could be read
+            frameCell = [0, 0, 0]
+
+            ps = 0
+            logger.info(f"checksum op packet: {sum(cells_volts_data[:len(cells_volts_data)-1]) & 0xff}")
+            cellno = 0
+            for f in range(nFrame):
+                frameOfs = f * self.daly_packet_length
+                sb, adr, cmd, leng, frame, frameCell[0], frameCell[1], frameCell[2], cs = unpack_from('>BBBBBhhhB', cells_volts_data, frameOfs)
+                if sb == 0xA5 and adr == 0x01 and cmd == 0x95 and leng == 0x08:
+                    logger.info(f"reading voltage frame {frame} ({f})...")
+                    assert((f+1) == frame) # daly counts from 1...
+                    ps += sum(cells_volts_data[frameOfs:frameOfs+self.daly_packet_length-1]) & 0xff
+                    logger.info(f"checksum from frame: {cs}, computed: {sum(cells_volts_data[frameOfs:frameOfs+self.daly_packet_length-1]) & 0xFF}")
+                    # assert(cs == (sum(cells_volts_data[frameOfs:frameOfs+self.daly_packet_length-1]) & 0xFF))
+
+                    for fi in range(3):
+                        cellVoltages[cellno] = frameCell[fi] / 1000.0
+                        cellno += 1
+                        if cellno == self.cell_count:
+                            break
+                else:
+                    logger.warning(f"read_cells_volts(): framing error, frame: {frame}")
+                    return False
+
+            logger.info(f"checksum op entire packet: {ps & 0xff}")
+
+            if len(self.cells) != self.cell_count:
+                # init the numbers of cells
+                self.cells = []
+                for idx in range(self.cell_count):
+                    self.cells.append(Cell(True))
+
+            for cellno in range(self.cell_count):
+                cv = cellVoltages[cellno]
+                logger.info(f"cell-voltage {cellno}: {cv}")
+                self.cells[cellno].voltage = cv
+
+            return True
+
+
+            lowMin = (MIN_CELL_VOLTAGE / 2)
+            frame = 0
+            bufIdx = 0
+
+            if len(self.cells) != self.cell_count:
+                # init the numbers of cells
+                self.cells = []
+                for idx in range(self.cell_count):
+                    self.cells.append(Cell(True))
+
+            while bufIdx < len(cells_volts_data) - 4: # we at least need 4 bytes to extract the identifiers
+                b1, b2, b3, b4 = unpack_from('>BBBB', cells_volts_data, bufIdx)
+                if b1 == 0xA5 and b2 == 0x01 and b3 == 0x95 and b4 == 0x08:
+                  frame, frameCell[0], frameCell[1], frameCell[2] = unpack_from('>Bhhh', cells_volts_data, bufIdx + 4)
+                  for idx in range(3):
+                    cellnum = ((frame - 1) * 3) + idx  # daly is 1 based, driver 0 based
+                    if cellnum >= self.cell_count:
+                        logger.info(f"break on cellnum {cellnum}")
+                        break
+                    cellVoltage = frameCell[idx] / 1000
+
+                    logger.info(f"Read cell voltageof cell {cellnum}: {cellVoltage}")
+
+                    self.cells[cellnum].voltage = None if cellVoltage < lowMin else cellVoltage
+                  bufIdx += 10 # BBBBBhhh -> 11 byte
+                bufIdx += 1
+
+        else:
+                logger.warning("read_cells_volts(): no cell_count!")
+
+        return True
+
+    def old_read_cells_volts(self, ser):
+        if self.cell_count is not None:
+            buffer = bytearray(self.cellvolt_buffer)
+            buffer[1] = self.command_address[0]   # Always serial 40 or 80
+            buffer[2] = self.command_cell_volts[0]
+
             maxFrame = (int(self.cell_count / 3) + 1)
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -393,7 +488,7 @@ class Daly(Battery):
             lenFixed = (maxFrame * 12) # 0xA5, 0x01, 0x95, 0x08 + 1 byte frame + 6 byte data + 1byte reserved
 >>>>>>> Update serialbattery code, includes our daly.py changes.
 
-            cells_volts_data = read_serialport_data(ser, buffer, self.LENGTH_POS, self.LENGTH_CHECK, lenFixed)
+            cells_volts_data = read_serialport_data(ser, buffer, lenFixed)
             if cells_volts_data is False:
                 logger.warning("read_cells_volts(): error serial read")
                 return False
