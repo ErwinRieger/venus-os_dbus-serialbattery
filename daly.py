@@ -263,6 +263,7 @@ class Daly(Battery):
                 self.voltage = (voltage / 10)
                 self.current = current
                 # self.soc = (soc / 10)
+                logger.info(f"read soc {soc/10} % from daly...")
 
                 t = time.time()
                 capacity_remain = self.capacity_remain  + (current * (t - self.lastSocTime)) / 3600.0 # current negative if discharging
@@ -411,7 +412,7 @@ class Daly(Battery):
                 logger.warning("read_cells_volts(): error serial read")
                 return False
 
-            logger.info(f"read {len(cells_volts_data)} of {lenFixed}")
+            # logger.info(f"read {len(cells_volts_data)} of {lenFixed}")
 
             # How to handle checksum?
             # * every frame has it's own checksum

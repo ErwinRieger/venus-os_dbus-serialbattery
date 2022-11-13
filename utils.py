@@ -226,7 +226,7 @@ def read_serialport_data(ser, command, length_pos, length_check, length_fixed=No
                 logger.error(">>> ERROR: No reply - returning [len:" + str(len(data)) + "/" + str(length + length_check) + "]")
                 return False
 
-        sleep(0.1)
+        sleep(0.05)
         read_serial_garbage(ser, "after");
         return data
 
