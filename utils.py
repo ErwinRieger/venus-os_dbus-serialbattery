@@ -174,11 +174,11 @@ def read_serial_garbage(ser, when):
 
 # Read data from previously openned serial port
 def read_serialport_data(ser, command, length_pos, length_check, length_fixed=None, length_size=None):
-    read_serial_garbage(ser, "before");
+
     try:
         # ser.flushOutput()
         # ser.flushInput()
-        # read_serial_garbage(ser);
+        read_serial_garbage(ser, "before");
 
         ser.write(command)
         ser.flushOutput()
@@ -234,8 +234,6 @@ def read_serialport_data(ser, command, length_pos, length_check, length_fixed=No
         logger.error(e)
         return False
 
-
-
 def read_serialport_data_fixed(ser, command, length):
 
     try:
@@ -246,22 +244,21 @@ def read_serialport_data_fixed(ser, command, length):
         ser.write(command)
         ser.flushOutput()
 
-        # toread = ser.inWaiting()
-
-        #logger.info('serial data toread ' + str(toread))
-        #logger.info('serial data length ' + str(length))
-
         count = 0
         data = bytearray()
         while len(data) < length:
             res = ser.read(length - len(data))
             if res:
                 data.extend(res)
-                logger.info(f"read {len(data)} of {length} bytes...")
-            sleep(0.05)
+                # logger.info(f"read {len(data)} of {length} bytes...")
+            
+            if len(data) == length:
+                break
+
+            sleep(0.1)
             count += 1
-            if count > 10: # Timeout: 0.5s
-                logger.error(">>> ERROR: No reply - returning [len:" + str(len(data)) + "/" + str(length) + "]")
+            if count > 10: # Timeout: 1s
+                logger.error(f"timeout, read {len(data)} of {length} bytes")
                 return False
 
         sleep(0.05)

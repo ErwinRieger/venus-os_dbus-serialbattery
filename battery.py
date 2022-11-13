@@ -106,6 +106,7 @@ class Battery(object):
         if (CVCM_ENABLE):
 
             if len(self.cells) < self.cell_count:
+                assert(0)
                 # Handle case when not all data is available on startup
                 logger.info(f"incomplete cell data...: {len(self.cells)} of {self.cell_count}")
                 return
@@ -128,7 +129,8 @@ class Battery(object):
             logger.info(f"minCellVoltage: {minCellVoltage:.3f}V, MIN_CELL_VOLTAGE: {MIN_CELL_VOLTAGE:.3f}V, RECONNECTCELLVOLTAGE: {RECONNECTCELLVOLTAGE:.3f}V")
             logger.info(f"maxCellVoltage: {maxCellVoltage:.3f}V, MAX_CELL_VOLTAGE: {MAX_CELL_VOLTAGE:.3f}V, FLOAT_CELL_VOLTAGE: {FLOAT_CELL_VOLTAGE:.3f}V")
 
-            if minCellVoltage != None:
+            assert(minCellVoltage != None)
+            if 1: # if minCellVoltage != None:
 
                 assert((minCellVoltage >= 2) and (minCellVoltage < 4))
 
@@ -150,7 +152,8 @@ class Battery(object):
                     # self.min_battery_voltage = MIN_CELL_VOLTAGE * self.cell_count + 0.05
                     self.control_discharge_current = self.max_battery_discharge_current # turn on inverter
 
-            if maxCellVoltage != None:
+            assert(maxCellVoltage != None)
+            if 1: # if maxCellVoltage != None:
 
                 assert((maxCellVoltage >= 2) and (maxCellVoltage < 4))
 
@@ -179,23 +182,6 @@ class Battery(object):
 
             return
 
-            if None == self.max_voltage_start_time:
-                if MAX_CELL_VOLTAGE * self.cell_count <= voltageSum and True == self.allow_max_voltage:
-                    self.max_voltage_start_time = time()
-                else:
-                    if SOC_LEVEL_TO_RESET_VOLTAGE_LIMIT > self.soc and not self.allow_max_voltage:
-                        self.allow_max_voltage = True
-            else:
-                tDiff = time() - self.max_voltage_start_time
-                if MAX_VOLTAGE_TIME_SEC < tDiff:
-                    self.max_voltage_start_time = None
-                    self.allow_max_voltage = False
-
-        if self.allow_max_voltage:
-            self.control_voltage = MAX_CELL_VOLTAGE * self.cell_count
-        else:
-            self.control_voltage = FLOAT_CELL_VOLTAGE * self.cell_count
-        
     def manage_charge_current(self):
         # If disabled make sure the default values are set and then exit
         if (not CCCM_ENABLE):

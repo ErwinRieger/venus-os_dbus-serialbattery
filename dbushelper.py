@@ -193,17 +193,19 @@ class DbusHelper:
             else:
                 error_count += 1
                 # If the battery is offline for more than 10 polls (polled every second for most batteries)
-                if error_count >= 100: 
+                if error_count >= 10: 
                     self.battery.online = False
 
-            # This is to mannage CCL\DCL
-            self.battery.manage_charge_current()
+            if self.battery.fullyRead:
+
+                # This is to mannage CCL\DCL
+                self.battery.manage_charge_current()
             
-            # This is to mannage CVCL
-            self.battery.manage_charge_voltage()            
+                # This is to mannage CVCL
+                self.battery.manage_charge_voltage()            
             
-            # publish all the data fro the battery object to dbus
-            self.publish_dbus()
+                # publish all the data fro the battery object to dbus
+                self.publish_dbus()
 
         except:
             logger.warning("publish_battery: caught exception...")
