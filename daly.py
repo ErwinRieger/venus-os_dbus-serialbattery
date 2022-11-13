@@ -9,8 +9,8 @@ from dbusmonitor import DbusMonitor
 import time, os, math
 import traceback
 
-SocStorage = "/data/db/capacity.dat"
-SocStorageInterval = 60
+# SocStorage = "/data/db/capacity.dat"
+# SocStorageInterval = 60
 
 class Daly(Battery):
 
@@ -32,12 +32,17 @@ class Daly(Battery):
         self.iavg = 0
 
         # Mod erri
+<<<<<<< HEAD
         self.capacity_remain = BATTERY_CAPACITY # * 0.66 # don't know real capacity
         self.lastSocTime = self.lastSocWrite = time.time()
 <<<<<<< HEAD
             
 >>>>>>> Importing.
 =======
+=======
+        self.capacity_remain = BATTERY_CAPACITY * 0.5 # initial value, don't know real capacity
+        # self.lastSocTime = self.lastSocWrite = time.time()
+>>>>>>> SOC: use value from daly, removed own computation of SOC.
         self.ser = None # serial device handle
         self.fullyRead = False
 
@@ -123,12 +128,14 @@ class Daly(Battery):
             logger.info(f"current discharge current setting: {i}")
             self.control_discharge_current = i
 
+        """
         try:
             self.capacity_remain = float(open(SocStorage).read())
         except:
             logger.info(f"get_settings(): error reading {SocStorage}")
 
         logger.info(f"get_settings(): start capacity: {self.capacity_remain} Ah")
+        """
         return True
 
     # returns a tuple (servicename, instance)
@@ -262,7 +269,11 @@ class Daly(Battery):
 >>>>>>> Importing.
                 self.voltage = (voltage / 10)
                 self.current = current
-                # self.soc = (soc / 10)
+                self.soc = (soc / 10)
+
+                self.capacity_remain = (self.capacity * self.soc)/100
+
+                """
                 logger.info(f"read soc {soc/10} % from daly...")
 
                 t = time.time()
@@ -286,6 +297,7 @@ class Daly(Battery):
                         # why does that happen? do we need some sort of sync()?
                         logger.error(f"Caught and ignoring FileNotFoundError when renaming {SocStorage+'.new'} to {SocStorage}!")
 
+                """
                 return True
                 
             logger.warning("read_soc_data - triesValid " + str(triesValid))
