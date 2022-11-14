@@ -296,9 +296,13 @@ class DbusHelper:
         if (BATTERY_CELL_DATA_FORMAT>0):
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 >>>>>>> Update serialbattery code, includes our daly.py changes.
             try:
+=======
+            if 1: # try:
+>>>>>>> Use BMS-SOC instead of own computation.
                 voltageSum = 0
                 for i in range(self.battery.cell_count):
                     voltage = self.battery.get_cell_voltage(i)
@@ -311,9 +315,14 @@ class DbusHelper:
                 pathbase = 'Cell' if (BATTERY_CELL_DATA_FORMAT & 2) else 'Voltages'
                 self._dbusservice['/%s/Sum'%pathbase] = voltageSum
                 self._dbusservice['/%s/Diff'%pathbase] = self.battery.get_max_cell_voltage() - self.battery.get_min_cell_voltage()
+<<<<<<< HEAD
             except:
                 pass
 <<<<<<< HEAD
+=======
+            # except:
+                # pass
+>>>>>>> Use BMS-SOC instead of own computation.
 
         # Update TimeToSoC
         try:
