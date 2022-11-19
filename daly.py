@@ -23,7 +23,7 @@ class Daly(Battery):
         self.cell_max_voltage = None
         self.cell_min_no = None
         self.cell_max_no = None
-        self.poll_interval = 1000
+        self.poll_interval = 2000
         self.poll_step = 0
         self.type = self.BATTERYTYPE
 <<<<<<< HEAD
