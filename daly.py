@@ -479,10 +479,13 @@ class Daly(Battery):
                 for idx in range(self.cell_count):
                     self.cells.append(Cell(True))
 
+            s="cell voltages: "
             for cellno in range(self.cell_count):
                 cv = cellVoltages[cellno]
-                logger.info(f"cell {cellno}: {cv}")
                 self.cells[cellno].voltage = cv
+                # logger.info(f"cell {cellno}: {cv}")
+                s += f"{cv} ")
+            logger.info(s)
 
         else:
             logger.warning("read_cells_volts(): no cell_count!")
