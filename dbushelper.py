@@ -207,10 +207,20 @@ class DbusHelper:
                 # publish all the data fro the battery object to dbus
                 self.publish_dbus()
 
-        except:
-            logger.warning("publish_battery: caught exception...")
+        except OSError as e:
             traceback.print_exc()
-            # loop.quit()
+            if e.errno == 5:
+                logger.error("publish_battery(): caught OSError (Input/output error) exception, restarting...")
+                loop.quit()
+                return False
+            logger.error(f"publish_battery(): un-caught OSError exception, errno: {e.errno} restarting...")
+            loop.quit()
+            return False
+        except:
+            traceback.print_exc()
+            logger.warning("publish_battery: un-caught exception, restarting...")
+            loop.quit()
+            return False
 
         logger.info(f"publish_battery end...")
         return True
