@@ -133,18 +133,21 @@ def format_value(value, prefix, suffix):
                                       ('' if suffix is None else suffix)
 
 def read_serial_data(command, port, baud, length_pos, length_check, length_fixed=None, length_size=None):
-    try:
-        with serial.Serial(port, baudrate=baud, timeout=0.1) as ser:
-            return read_serialport_data(ser, command, length_pos, length_check, length_fixed, length_size)
+    # try:
+    with serial.Serial(port, baudrate=baud, timeout=0.1) as ser:
+        return read_serialport_data(ser, command, length_pos, length_check, length_fixed, length_size)
 
-    except serial.SerialException as e:
-        logger.error(e)
-        return False
+    # except serial.SerialException as e:
+        # logger.exception(e)
+        # return False
 
 
 # Open the serial port
 # Return variable for the openned port 
 def open_serial_port(port, baud):
+    return serial.Serial(port, baudrate=baud, timeout=0.1)
+
+    """
     ser = None
     tries = 3
     while tries > 0:
@@ -152,22 +155,23 @@ def open_serial_port(port, baud):
             ser = serial.Serial(port, baudrate=baud, timeout=0.1)
             tries = 0
         except serial.SerialException as e:
-            logger.error(e)
+            logger.exception(e)
             tries -= 1
             
     return ser
+    """
 
 def read_serial_garbage(ser, when):
     l = ser.inWaiting()
     while l:
         logger.info(f"read_serial_garbage ({when}): {l} bytes available...")
-        try:
-            res = ser.read(l)
-        except serial.SerialException as e:
-            logger.error(f"read_serial_garbage(): exception while reading, ignoring:")
-            logger.error(e)
-            l = ser.inWaiting()
-            continue
+        # try:
+        res = ser.read(l)
+        # except serial.SerialException as e:
+            # logger.exception(e)
+            # logger.error(f"read_serial_garbage(): exception while reading, ignoring:")
+            # l = ser.inWaiting()
+            # continue
         logger.info(f"read_serial_garbage: read {len(res)} bytes ...")
         sleep(0.05)
         l = ser.inWaiting()
@@ -231,14 +235,13 @@ def read_serialport_data(ser, command, length_pos, length_check, length_fixed=No
         return data
 
     except serial.SerialException as e:
-        logger.error(e)
-        return False
+        logger.exception(e)
+        logger.error(f"read_serialport_data(): exception caught...")
+        raise
 
 def read_serialport_data_fixed(ser, command, length):
 
     try:
-        # ser.flushOutput()
-        # ser.flushInput()
         read_serial_garbage(ser, "before");
 
         ser.write(command)
@@ -266,9 +269,9 @@ def read_serialport_data_fixed(ser, command, length):
         return data
 
     except serial.SerialException as e:
+        logger.exception(e)
         logger.error(f"read_serialport_data_fixed(): exception caught...")
-        logger.error(e)
-        return False
+        raise
 
 
 

@@ -4,7 +4,6 @@ import sys
 import os
 import platform
 import dbus
-import traceback
 # Victron packages
 sys.path.insert(1, os.path.join(os.path.dirname(__file__), '/opt/victronenergy/dbus-systemcalc-py/ext/velib_python'))
 from vedbus import VeDbusService
@@ -208,7 +207,7 @@ class DbusHelper:
                 self.publish_dbus()
 
         except OSError as e:
-            traceback.print_exc()
+            logger.exception(e)
             if e.errno == 5:
                 logger.error("publish_battery(): caught OSError (Input/output error) exception, restarting...")
                 loop.quit()
@@ -217,7 +216,7 @@ class DbusHelper:
             loop.quit()
             return False
         except:
-            traceback.print_exc()
+            logger.exception(e)
             logger.warning("publish_battery: un-caught exception, restarting...")
             loop.quit()
             return False
@@ -307,6 +306,7 @@ class DbusHelper:
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 >>>>>>> Update serialbattery code, includes our daly.py changes.
             try:
@@ -333,6 +333,21 @@ class DbusHelper:
             # except:
                 # pass
 >>>>>>> Use BMS-SOC instead of own computation.
+=======
+
+            voltageSum = 0
+            for i in range(self.battery.cell_count):
+                voltage = self.battery.get_cell_voltage(i)
+                cellpath = '/Cell/%s/Volts' if (BATTERY_CELL_DATA_FORMAT & 2) else '/Voltages/Cell%s'
+                self._dbusservice[cellpath%(str(i+1))] = voltage
+                if (BATTERY_CELL_DATA_FORMAT & 1):
+                    self._dbusservice['/Balances/Cell%s'%(str(i+1))] = self.battery.get_cell_balancing(i)
+                if voltage:
+                    voltageSum+=voltage
+            pathbase = 'Cell' if (BATTERY_CELL_DATA_FORMAT & 2) else 'Voltages'
+            self._dbusservice['/%s/Sum'%pathbase] = voltageSum
+            self._dbusservice['/%s/Diff'%pathbase] = self.battery.get_max_cell_voltage() - self.battery.get_min_cell_voltage()
+>>>>>>> Cleanup exception handling.
 
         # Update TimeToSoC
         try:

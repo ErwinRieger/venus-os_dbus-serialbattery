@@ -6,8 +6,7 @@ from struct import *
 
 from dbusmonitor import DbusMonitor
 
-import time, os, math
-import traceback
+import math
 
 # SocStorage = "/data/db/capacity.dat"
 # SocStorageInterval = 60
@@ -67,6 +66,7 @@ class Daly(Battery):
     DALY_PACKET_LENGTH = 13
 
     def test_connection(self):
+<<<<<<< HEAD
         result = False
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -99,8 +99,14 @@ class Daly(Battery):
         # except:
             # pass
 >>>>>>> Improve serial read. Don't use a separate thread to read and publish
+=======
+>>>>>>> Cleanup exception handling.
 
-        return result
+        self.ser = open_serial_port(self.port, self.baud_rate)
+        if self.ser is not None:
+            return self.read_status_data(self.ser)
+
+        return False
 
     def get_settings(self):
         self.capacity = BATTERY_CAPACITY
@@ -421,7 +427,7 @@ class Daly(Battery):
 
             cells_volts_data = read_serialport_data_fixed(ser, buffer, lenFixed)
             if cells_volts_data is False:
-                logger.warning("read_cells_volts(): error serial read")
+                # logger.warning("read_cells_volts(): error serial read")
                 return False
 
             # logger.info(f"read {len(cells_volts_data)} of {lenFixed}")
