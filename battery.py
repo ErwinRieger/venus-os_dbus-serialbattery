@@ -105,79 +105,58 @@ class Battery(object):
         voltageSum = 0
         if (CVCM_ENABLE):
 
+            """
             if len(self.cells) < self.cell_count:
-                assert(0)
                 # Handle case when not all data is available on startup
                 logger.info(f"incomplete cell data...: {len(self.cells)} of {self.cell_count}")
                 return
+            """
 
             aboveVolt = 0
-            for i in range(self.cell_count):
-                voltage = self.cells[i].voltage
+            for cell in self.cells:
+                voltage = cell.voltage
                 if voltage:
                     voltageSum+=voltage
                     if voltage > FLOAT_CELL_VOLTAGE:
                         aboveVolt += voltage - FLOAT_CELL_VOLTAGE
 
-            #
-            # Mod erri
-            #
             minCellVoltage = self.get_min_cell_voltage()
             maxCellVoltage = self.get_max_cell_voltage()
 
-            logger.info(f"pack voltage: {voltageSum:.3f}V, cell-diff: {(maxCellVoltage-minCellVoltage)*1000:.2f}mV")
-            logger.info(f"minCellVoltage: {minCellVoltage:.3f}V, MIN_CELL_VOLTAGE: {MIN_CELL_VOLTAGE:.3f}V, RECONNECTCELLVOLTAGE: {RECONNECTCELLVOLTAGE:.3f}V")
-            logger.info(f"maxCellVoltage: {maxCellVoltage:.3f}V, MAX_CELL_VOLTAGE: {MAX_CELL_VOLTAGE:.3f}V, FLOAT_CELL_VOLTAGE: {FLOAT_CELL_VOLTAGE:.3f}V")
+            logger.info(f"Batt voltage (sum): {voltageSum:.3f}V, cell-low: {minCellVoltage:.3f}V, cell-high: {maxCellVoltage:.3f}, diff: {(maxCellVoltage-minCellVoltage)*1000:.2f}mV")
 
-            assert(minCellVoltage != None)
-            if 1: # if minCellVoltage != None:
+            assert((minCellVoltage >= 2) and (minCellVoltage < 4))
 
-                assert((minCellVoltage >= 2) and (minCellVoltage < 4))
+            # disconnect from battery if a cell voltage is below min voltage
+            if minCellVoltage < MIN_CELL_VOLTAGE:
 
-                # disconnect from battery if a cell voltage is below min voltage
-                if minCellVoltage < MIN_CELL_VOLTAGE: #  and self.inverterControl.isOn(): # xxx hardcoded
+                # turn off inverter
+                logger.info(f"turn off inverter, cell-low {minCellVoltage:.3f}V < MIN_CELL_VOLTAGE: {MIN_CELL_VOLTAGE:.3f}V")
+                self.control_discharge_current = 0.0 # turn off inverter
 
-                    # turn off inverter
-                    logger.info(f"turn off inverter")
-                    # self.inverterControl.turnOff()
-                    # self.min_battery_voltage = voltageSum + 1 + 0.05
-                    self.control_discharge_current = 0.0 # turn off inverter
+            # re-connect to battery if all cells are above min voltage
+            elif minCellVoltage > RECONNECTCELLVOLTAGE:
 
-                # re-connect to battery if all cells are above min voltage
-                if minCellVoltage > RECONNECTCELLVOLTAGE: #  and not self.inverterControl.isOn(): # xxx about 50% SOC, hardcoded
+                # turn on inverter
+                logger.info(f"turn on inverter, cell-low {minCellVoltage:.3f}V > RECONNECTCELLVOLTAGE: {RECONNECTCELLVOLTAGE:.3f}V")
+                self.control_discharge_current = self.max_battery_discharge_current # turn on inverter
+            else:
+                logger.info(f"keep inverter, MIN_CELL_VOLTAGE: {MIN_CELL_VOLTAGE:.3f}V < cell-low {minCellVoltage:.3f}V < RECONNECTCELLVOLTAGE: {RECONNECTCELLVOLTAGE:.3f}V")
 
-                    # turn on inverter
-                    logger.info(f"turn on inverter")
-                    # self.inverterControl.turnOn()
-                    # self.min_battery_voltage = MIN_CELL_VOLTAGE * self.cell_count + 0.05
-                    self.control_discharge_current = self.max_battery_discharge_current # turn on inverter
+            assert((maxCellVoltage >= 2) and (maxCellVoltage < 4))
 
-            assert(maxCellVoltage != None)
-            if 1: # if maxCellVoltage != None:
+            chargevoltage = min(
+                    voltageSum - aboveVolt,
+                    self.cell_count * FLOAT_CELL_VOLTAGE)
 
-                assert((maxCellVoltage >= 2) and (maxCellVoltage < 4))
+            # start charging if all cells below 3.425v
+            if maxCellVoltage < FLOAT_CELL_VOLTAGE:
+                chargevoltage = MAX_CELL_VOLTAGE * self.cell_count
+                logger.info(f"un-throttling charger, cell-high: {maxCellVoltage:.3f} < FLOAT_CELL_VOLTAGE: {FLOAT_CELL_VOLTAGE:.3f}V")
+            else:
+                logger.info(f"throttling charger cell-high: {maxCellVoltage:.3f} > FLOAT_CELL_VOLTAGE: {FLOAT_CELL_VOLTAGE:.3f}V, aboveVolt: {aboveVolt:.3f}V")
 
-                # chargevoltage = self.cell_count * MAX_CELL_VOLTAGE
-                # chargevoltage = self.cell_count * FLOAT_CELL_VOLTAGE
-                chargevoltage = min(
-                        voltageSum - aboveVolt,
-                        self.cell_count * FLOAT_CELL_VOLTAGE)
-
-                # # stop charging if a cell voltage is above 3.45v
-                # if maxCellVoltage > MAX_CELL_VOLTAGE:
-                    # # freeze charging voltage
-                    # # chargevoltage = min(voltageSum, MAX_CELL_VOLTAGE * self.cell_count)
-                    # chargevoltage = FLOAT_CELL_VOLTAGE * self.cell_count)
-                    # logger.info(f"floating charger")
-            
-                # start charging if all cells below 3.425v
-                # elif maxCellVoltage < FLOAT_CELL_VOLTAGE:
-                if maxCellVoltage < FLOAT_CELL_VOLTAGE:
-                    # chargevoltage = 55.2 # 3.45 v per cell
-                    chargevoltage = MAX_CELL_VOLTAGE * self.cell_count
-                    logger.info(f"un-throttling charger")
-
-            logger.info(f"setting control_voltage: {chargevoltage:.3f}V, control_discharge_current: {str(self.control_discharge_current)}A, aboveVolt: {aboveVolt:.3f}V")
+            logger.info(f"setting control_voltage: {chargevoltage:.3f}V, control_discharge_current: {str(self.control_discharge_current)}A")
             self.control_voltage = chargevoltage
 
             return
