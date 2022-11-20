@@ -490,7 +490,7 @@ class Daly(Battery):
                 cv = cellVoltages[cellno]
                 self.cells[cellno].voltage = cv
                 # logger.info(f"cell {cellno}: {cv}")
-                s += f"{cv} ")
+                s += f"{cv} "
             logger.info(s)
 
         else:
