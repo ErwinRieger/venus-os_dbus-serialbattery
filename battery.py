@@ -145,16 +145,26 @@ class Battery(object):
 
             assert((maxCellVoltage >= 2) and (maxCellVoltage < 4))
 
-            chargevoltage = min(
-                    voltageSum - aboveVolt,
-                    self.cell_count * FLOAT_CELL_VOLTAGE)
+            chargevoltage = self.control_voltage
 
             # start charging if all cells below 3.425v
             if maxCellVoltage < FLOAT_CELL_VOLTAGE:
+
                 chargevoltage = MAX_CELL_VOLTAGE * self.cell_count
                 logger.info(f"un-throttling charger, cell-high: {maxCellVoltage:.3f} < FLOAT_CELL_VOLTAGE: {FLOAT_CELL_VOLTAGE:.3f}V")
+
             else:
-                logger.info(f"throttling charger cell-high: {maxCellVoltage:.3f} > FLOAT_CELL_VOLTAGE: {FLOAT_CELL_VOLTAGE:.3f}V, aboveVolt: {aboveVolt:.3f}V")
+
+                if aboveVolt > 0.050: # allow for 50mV hysteresis to avoid frequent voltage changes
+
+                    chargevoltage = min(voltageSum - aboveVolt,
+                                        self.cell_count * FLOAT_CELL_VOLTAGE)
+
+                    logger.info(f"throttling charger, cell-high: {maxCellVoltage:.3f} > FLOAT_CELL_VOLTAGE: {FLOAT_CELL_VOLTAGE:.3f}V, aboveVolt: {aboveVolt:.3f}V")
+
+                else:
+
+                    logger.info(f"keep charger, cell-high: {maxCellVoltage:.3f}, aboveVolt: {aboveVolt:.3f}V")
 
             logger.info(f"setting control_voltage: {chargevoltage:.3f}V, control_discharge_current: {str(self.control_discharge_current)}A")
             self.control_voltage = chargevoltage
