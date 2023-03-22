@@ -117,8 +117,8 @@ class Battery(object):
                 voltage = cell.voltage
                 if voltage:
                     voltageSum+=voltage
-                    if voltage > FLOAT_CELL_VOLTAGE:
-                        aboveVolt += voltage - FLOAT_CELL_VOLTAGE
+                    if voltage > MAX_CELL_VOLTAGE:
+                        aboveVolt += voltage - MAX_CELL_VOLTAGE
 
             minCellVoltage = self.get_min_cell_voltage()
             maxCellVoltage = self.get_max_cell_voltage()
@@ -147,20 +147,20 @@ class Battery(object):
 
             chargevoltage = self.control_voltage
 
-            # start charging if all cells below 3.425v
-            if maxCellVoltage < FLOAT_CELL_VOLTAGE:
+            # start charging if all cells below max cell voltage
+            if maxCellVoltage < MAX_CELL_VOLTAGE:
 
                 chargevoltage = MAX_CELL_VOLTAGE * self.cell_count
-                logger.info(f"un-throttling charger, cell-high: {maxCellVoltage:.3f} < FLOAT_CELL_VOLTAGE: {FLOAT_CELL_VOLTAGE:.3f}V")
+                logger.info(f"un-throttling charger, cell-high: {maxCellVoltage:.3f} < MAX_CELL_VOLTAGE: {MAX_CELL_VOLTAGE:.3f}V")
 
             else:
 
                 if aboveVolt > 0.050: # allow for 50mV hysteresis to avoid frequent voltage changes
 
                     chargevoltage = min(voltageSum - aboveVolt,
-                                        self.cell_count * FLOAT_CELL_VOLTAGE)
+                                        self.cell_count * MAX_CELL_VOLTAGE)
 
-                    logger.info(f"throttling charger, cell-high: {maxCellVoltage:.3f} > FLOAT_CELL_VOLTAGE: {FLOAT_CELL_VOLTAGE:.3f}V, aboveVolt: {aboveVolt:.3f}V")
+                    logger.info(f"throttling charger, cell-high: {maxCellVoltage:.3f} > MAX_CELL_VOLTAGE: {MAX_CELL_VOLTAGE:.3f}V, aboveVolt: {aboveVolt:.3f}V")
 
                 else:
 
