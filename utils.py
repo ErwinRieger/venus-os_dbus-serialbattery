@@ -12,34 +12,6 @@ logger.setLevel(logging.INFO)
 
 # Constants - Need to dynamically get them in future
 DRIVER_VERSION = 0.12
-<<<<<<< HEAD
-<<<<<<< HEAD
-DRIVER_SUBVERSION = 'b3'
-=======
-DRIVER_SUBVERSION = ''
->>>>>>> Importing.
-zero_char = chr(48)
-degree_sign = u'\N{DEGREE SIGN}'
-# Cell min/max voltages - used with the cell count to get the min/max battery voltage
-MIN_CELL_VOLTAGE = 2.9
-<<<<<<< HEAD
-MAX_CELL_VOLTAGE = 3.45
-# battery Current limits
-MAX_BATTERY_CURRENT = 50.0
-MAX_BATTERY_DISCHARGE_CURRENT = 60.0
-# Charge current control management enable (True/False). 
-CCCM_ENABLE = True
-# Simulate Midpoint graph (True/False). 
-MIDPOINT_ENABLE = False
-
-# Daly settings
-# Battery capacity (amps) if the BMS does not support reading it 
-BATTERY_CAPACITY = 50
-# Invert Battery Current. Default non-inverted. Set to -1 to invert
-INVERT_CURRENT_MEASUREMENT = 1
-=======
-MAX_CELL_VOLTAGE = 3.5
-=======
 DRIVER_SUBVERSION = 'b3'
 zero_char = chr(48)
 degree_sign = u'\N{DEGREE SIGN}'
@@ -48,7 +20,6 @@ degree_sign = u'\N{DEGREE SIGN}'
 MAX_VOLTAGE_TIME_SEC = 15*60
 SOC_LEVEL_TO_RESET_VOLTAGE_LIMIT = 90
 
->>>>>>> Update serialbattery code, includes our daly.py changes.
 # battery Current limits
 # MAX_BATTERY_CURRENT = 50.0
 MAX_BATTERY_CURRENT = 250.0 # manne: 100
@@ -79,7 +50,6 @@ MIDPOINT_ENABLE = False
 BATTERY_CAPACITY = 450 # manne: 75
 # Invert Battery Current. Default non-inverted. Set to -1 to invert
 INVERT_CURRENT_MEASUREMENT = -1
->>>>>>> Importing.
 
 # TIME TO SOC settings [Valid values 0-100, but I don't recommend more that 20 intervals]
 # Set of SoC percentages to report on dbus. The more you specify the more it will impact system performance.
@@ -104,20 +74,11 @@ TIME_TO_SOC_INC_FROM = False
 # 3 Both formats 1 and 2
 BATTERY_CELL_DATA_FORMAT = 1
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> Update serialbattery code, includes our daly.py changes.
 # Settings for ESC GreenMeter and Lipro devices
 GREENMETER_ADDRESS = 1
 # LIPRO_START_ADDRESS = 2
 # LIPRO_END_ADDRESS = 4
 LIPRO_CELL_COUNT = 15
-<<<<<<< HEAD
-=======
->>>>>>> Importing.
-=======
->>>>>>> Update serialbattery code, includes our daly.py changes.
 
 def is_bit_set(tmp):
     return False if tmp == zero_char else True
