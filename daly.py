@@ -8,9 +8,6 @@ from dbusmonitor import DbusMonitor
 
 import math
 
-# SocStorage = "/data/db/capacity.dat"
-# SocStorageInterval = 60
-
 class Daly(Battery):
 
     def __init__(self, port,baud,address):
@@ -25,8 +22,8 @@ class Daly(Battery):
         self.poll_interval = 2000
         self.poll_step = 0
         self.type = self.BATTERYTYPE
-        self.currentAvg = 10 * [0]
-        self.iavg = 0
+        # self.currentAvg = 10 * [0]
+        # self.iavg = 0
 
         # Mod erri
         self.capacity_remain = BATTERY_CAPACITY * 0.5 # initial value, don't know real capacity
@@ -87,14 +84,6 @@ class Daly(Battery):
             logger.info(f"current discharge current setting: {i}")
             self.control_discharge_current = i
 
-        """
-        try:
-            self.capacity_remain = float(open(SocStorage).read())
-        except:
-            logger.info(f"get_settings(): error reading {SocStorage}")
-
-        logger.info(f"get_settings(): start capacity: {self.capacity_remain} Ah")
-        """
         return True
 
     # returns a tuple (servicename, instance)
@@ -122,33 +111,6 @@ class Daly(Battery):
                 self.poll_step = 0
                 self.fullyRead = True
 
-        return result
-
-    def old_refresh_data(self):
-        logger.info(f"refresh_data start...")
-        result = False
-        # Open serial port to be used for all data reads instead of openning multiple times 
-        # ser = open_serial_port(self.port, self.baud_rate)
-        if self.ser is not None:
-            result = self.read_soc_data(self.ser)
-            result = result and self.read_fed_data(self.ser)
-            result = result and self.read_cell_voltage_range_data(self.ser)
-
-            if self.poll_step == 0:
-                result = result and self.read_alarm_data(self.ser)
-                result = result and self.read_temperature_range_data(self.ser)
-            elif self.poll_step == 1:
-                result = result and self.read_cells_volts(self.ser)
-                            
-            #else:          # A placeholder to remind this is the last step. Add any additional steps before here
-                # This is last step so reset poll_step
-                self.poll_step = -1
-
-            self.poll_step += 1
-            
-            # ser.close()
-
-        logger.info(f"refresh_data end...")
         return result
 
     def read_status_data(self, ser):
@@ -185,12 +147,12 @@ class Daly(Battery):
 
             if crntMinValid < current < crntMaxValid:
 
-                self.currentAvg[self.iavg] = current
-                current = sum(self.currentAvg) / len(self.currentAvg)
+                # self.currentAvg[self.iavg] = current
+                # current = sum(self.currentAvg) / len(self.currentAvg)
 
-                self.iavg += 1
-                if self.iavg == len(self.currentAvg):
-                    self.iavg = 0
+                # self.iavg += 1
+                # if self.iavg == len(self.currentAvg):
+                    # self.iavg = 0
             
                 self.voltage = (voltage / 10)
                 self.current = current
@@ -198,31 +160,6 @@ class Daly(Battery):
 
                 self.capacity_remain = (self.capacity * self.soc)/100
 
-                """
-                logger.info(f"read soc {soc/10} % from daly...")
-
-                t = time.time()
-                capacity_remain = self.capacity_remain  + (current * (t - self.lastSocTime)) / 3600.0 # current negative if discharging
-                self.capacity_remain = max( min(self.capacity, capacity_remain), 0) # cap at 100% and 0%
-                self.lastSocTime = t
-
-                self.soc = (100 * self.capacity_remain) / self.capacity
-
-                if (t - self.lastSocWrite) > SocStorageInterval:
-                    # Store current soc for restart
-                    f = open(SocStorage+".new", "w")
-                    f.write(f"{self.capacity_remain}")
-                    f.flush()
-                    f.close()
-
-                    try:
-                        os.replace(SocStorage+".new", SocStorage)
-                        self.lastSocWrite = t
-                    except FileNotFoundError:
-                        # why does that happen? do we need some sort of sync()?
-                        logger.error(f"Caught and ignoring FileNotFoundError when renaming {SocStorage+'.new'} to {SocStorage}!")
-
-                """
                 return True
                 
             logger.warning("read_soc_data - triesValid " + str(triesValid))
@@ -414,55 +351,6 @@ class Daly(Battery):
 
         else:
             logger.warning("read_cells_volts(): no cell_count!")
-
-        return True
-
-    def old_read_cells_volts(self, ser):
-        if self.cell_count is not None:
-            buffer = bytearray(self.cellvolt_buffer)
-            buffer[1] = self.command_address[0]   # Always serial 40 or 80
-            buffer[2] = self.command_cell_volts[0]
-
-            maxFrame = (int(self.cell_count / 3) + 1)
-            lenFixed = (maxFrame * 12) # 0xA5, 0x01, 0x95, 0x08 + 1 byte frame + 6 byte data + 1byte reserved
-
-            cells_volts_data = read_serialport_data(ser, buffer, lenFixed)
-            if cells_volts_data is False:
-                logger.warning("read_cells_volts(): error serial read")
-                return False
-
-            logger.info(f"read {len(cells_volts_data)} of {lenFixed + self.LENGTH_CHECK}")
-
-            frameCell = [0, 0, 0]
-            lowMin = (MIN_CELL_VOLTAGE / 2)
-            frame = 0
-            bufIdx = 0
-
-            if len(self.cells) != self.cell_count:
-                # init the numbers of cells
-                self.cells = []
-                for idx in range(self.cell_count):
-                    self.cells.append(Cell(True))
-
-            while bufIdx < len(cells_volts_data) - 4: # we at least need 4 bytes to extract the identifiers
-                b1, b2, b3, b4 = unpack_from('>BBBB', cells_volts_data, bufIdx)
-                if b1 == 0xA5 and b2 == 0x01 and b3 == 0x95 and b4 == 0x08:
-                  frame, frameCell[0], frameCell[1], frameCell[2] = unpack_from('>Bhhh', cells_volts_data, bufIdx + 4)
-                  for idx in range(3):
-                    cellnum = ((frame - 1) * 3) + idx  # daly is 1 based, driver 0 based
-                    if cellnum >= self.cell_count:
-                        logger.info(f"break on cellnum {cellnum}")
-                        break
-                    cellVoltage = frameCell[idx] / 1000
-
-                    logger.info(f"Read cell voltageof cell {cellnum}: {cellVoltage}")
-
-                    self.cells[cellnum].voltage = None if cellVoltage < lowMin else cellVoltage
-                  bufIdx += 10 # BBBBBhhh -> 11 byte
-                bufIdx += 1
-
-        else:
-                logger.warning("read_cells_volts(): no cell_count!")
 
         return True
 
