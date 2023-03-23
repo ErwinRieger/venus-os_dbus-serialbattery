@@ -4,7 +4,6 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 from time import sleep
 from dbus.mainloop.glib import DBusGMainLoop
-# from threading import Thread
 import dbus
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -46,14 +45,6 @@ from ecs import Ecs
 logger.info('Starting dbus-serialbattery')
 
 def main():
-
-    def poll_battery(loop):
-        # Run in separate thread. Pass in the mainloop so the thread can kill us if there is an exception.
-        poller = Thread(target=lambda: helper.publish_battery(loop))
-        # Thread will die with us if deamon
-        poller.daemon = True
-        poller.start()
-        return True
 
     def get_battery_type(_port):
         # all the different batteries the driver support and need to test for
@@ -151,7 +142,6 @@ def main():
 
 >>>>>>> Importing.
     # Poll the battery at INTERVAL and run the main loop
-    # gobject.timeout_add(battery.poll_interval, lambda: poll_battery(mainloop))
     gobject.timeout_add(battery.poll_interval, lambda: helper.publish_battery(mainloop))
     try:
         mainloop.run()
