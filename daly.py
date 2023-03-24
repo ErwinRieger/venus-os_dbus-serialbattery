@@ -22,8 +22,10 @@ class Daly(Battery):
         self.poll_interval = 2000
         self.poll_step = 0
         self.type = self.BATTERYTYPE
-        # self.currentAvg = 10 * [0]
-        # self.iavg = 0
+
+        # SMOOTH_BMS_CURRENT
+        self.currentAvg = 10 * [0]
+        self.iavg = 0
 
         # Mod erri
         self.capacity_remain = BATTERY_CAPACITY * 0.5 # initial value, don't know real capacity
@@ -147,12 +149,16 @@ class Daly(Battery):
 
             if crntMinValid < current < crntMaxValid:
 
-                # self.currentAvg[self.iavg] = current
-                # current = sum(self.currentAvg) / len(self.currentAvg)
+                if SMOOTH_BMS_CURRENT:
 
-                # self.iavg += 1
-                # if self.iavg == len(self.currentAvg):
-                    # self.iavg = 0
+                    # Some daly bms have a very unsteady current measurement, 
+                    # average this out here:
+                    self.currentAvg[self.iavg] = current
+                    current = sum(self.currentAvg) / len(self.currentAvg)
+
+                    self.iavg += 1
+                    if self.iavg == len(self.currentAvg):
+                        self.iavg = 0
             
                 self.voltage = (voltage / 10)
                 self.current = current
