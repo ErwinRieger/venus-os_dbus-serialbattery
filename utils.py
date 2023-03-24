@@ -223,7 +223,7 @@ def read_serialport_data_fixed(ser, command, length):
             sleep(0.1)
             count += 1
             if count > 10: # Timeout: 1s
-                logger.error(f"timeout, read {len(data)} of {length} bytes")
+                # logger.error(f"timeout, read {len(data)} of {length} bytes")
                 return False
 
         sleep(0.05)
