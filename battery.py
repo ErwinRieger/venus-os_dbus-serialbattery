@@ -131,7 +131,7 @@ class Battery(object):
             if minCellVoltage < MIN_CELL_VOLTAGE:
 
                 # turn off inverter
-                if self.control_discharge_current or (self.control_discharge_current == None)::
+                if self.control_discharge_current or (self.control_discharge_current == None):
                     logger.info(f"turn off inverter, cell-low {minCellVoltage:.3f}V < MIN_CELL_VOLTAGE: {MIN_CELL_VOLTAGE:.3f}V")
                 self.control_discharge_current = 0.0 # turn off inverter
 
@@ -143,7 +143,7 @@ class Battery(object):
 
                 # turn on inverter
                 if not self.control_discharge_current:
-                    logger.info(f"turn on inverter, cell-low {minCellVoltage:.3f}V > RECONNECTCELLVOLTAGE: {RECONNECTCELLVOLTAGE:.3f}V")
+                    logger.info(f"turn on inverter, cell-low {minCellVoltage:.3f}V > RECONNECTCELLVOLTAGE: {RECONNECTCELLVOLTAGE:.3f}V (or service re-start)")
                 self.control_discharge_current = self.max_battery_discharge_current # turn on inverter
             # else:
                 # logger.info(f"keep inverter, MIN_CELL_VOLTAGE: {MIN_CELL_VOLTAGE:.3f}V < cell-low {minCellVoltage:.3f}V < RECONNECTCELLVOLTAGE: {RECONNECTCELLVOLTAGE:.3f}V")
