@@ -65,7 +65,7 @@ class Battery(object):
         self.control_current = None
         self.control_previous_total = None
         self.control_previous_max = None
-        self.control_discharge_current = None # set in get_settings()
+        self.control_discharge_current = None # xxx remove me: not set in daly.py:get_settings()
         self.control_charge_current = None
         self.control_allow_charge = None
         # max battery charge/discharge current
@@ -123,7 +123,7 @@ class Battery(object):
             minCellVoltage = self.get_min_cell_voltage()
             maxCellVoltage = self.get_max_cell_voltage()
 
-            logger.info(f"Batt voltage (sum): {voltageSum:.3f}V, cell-low: {minCellVoltage:.3f}V, cell-high: {maxCellVoltage:.3f}, diff: {(maxCellVoltage-minCellVoltage)*1000:.2f}mV")
+            # logger.info(f"Batt voltage (sum): {voltageSum:.3f}V, cell-low: {minCellVoltage:.3f}V, cell-high: {maxCellVoltage:.3f}, diff: {(maxCellVoltage-minCellVoltage)*1000:.2f}mV")
 
             assert((minCellVoltage >= 2) and (minCellVoltage < 4))
 
@@ -131,27 +131,37 @@ class Battery(object):
             if minCellVoltage < MIN_CELL_VOLTAGE:
 
                 # turn off inverter
-                logger.info(f"turn off inverter, cell-low {minCellVoltage:.3f}V < MIN_CELL_VOLTAGE: {MIN_CELL_VOLTAGE:.3f}V")
+                if self.control_discharge_current or (self.control_discharge_current == None)::
+                    logger.info(f"turn off inverter, cell-low {minCellVoltage:.3f}V < MIN_CELL_VOLTAGE: {MIN_CELL_VOLTAGE:.3f}V")
                 self.control_discharge_current = 0.0 # turn off inverter
 
             # re-connect to battery if all cells are above min voltage
-            elif minCellVoltage > RECONNECTCELLVOLTAGE:
+            # Or
+            # Start inverter, if service is (re-) started without knowing
+            # current inverter state.
+            elif (minCellVoltage > RECONNECTCELLVOLTAGE) or (self.control_discharge_current == None):
 
                 # turn on inverter
-                logger.info(f"turn on inverter, cell-low {minCellVoltage:.3f}V > RECONNECTCELLVOLTAGE: {RECONNECTCELLVOLTAGE:.3f}V")
+                if not self.control_discharge_current:
+                    logger.info(f"turn on inverter, cell-low {minCellVoltage:.3f}V > RECONNECTCELLVOLTAGE: {RECONNECTCELLVOLTAGE:.3f}V")
                 self.control_discharge_current = self.max_battery_discharge_current # turn on inverter
-            else:
-                logger.info(f"keep inverter, MIN_CELL_VOLTAGE: {MIN_CELL_VOLTAGE:.3f}V < cell-low {minCellVoltage:.3f}V < RECONNECTCELLVOLTAGE: {RECONNECTCELLVOLTAGE:.3f}V")
+            # else:
+                # logger.info(f"keep inverter, MIN_CELL_VOLTAGE: {MIN_CELL_VOLTAGE:.3f}V < cell-low {minCellVoltage:.3f}V < RECONNECTCELLVOLTAGE: {RECONNECTCELLVOLTAGE:.3f}V")
 
             assert((maxCellVoltage >= 2) and (maxCellVoltage < 4))
 
-            chargevoltage = self.control_voltage
+            if self.control_voltage == None:
+                # Initial case
+                chargevoltage = voltageSum
+            else:
+                chargevoltage = self.control_voltage
 
             # start charging if all cells below max cell voltage
             if maxCellVoltage < MAX_CELL_VOLTAGE:
 
                 chargevoltage = MAX_CELL_VOLTAGE * self.cell_count
-                logger.info(f"un-throttling charger, cell-high: {maxCellVoltage:.3f} < MAX_CELL_VOLTAGE: {MAX_CELL_VOLTAGE:.3f}V")
+                if (self.control_voltage == None) or (chargevoltage > self.control_voltage):
+                    logger.info(f"un-throttling charger, cell-high: {maxCellVoltage:.3f} < MAX_CELL_VOLTAGE: {MAX_CELL_VOLTAGE:.3f}V")
 
             else:
 
@@ -160,13 +170,13 @@ class Battery(object):
                     chargevoltage = min(voltageSum - aboveVolt,
                                         self.cell_count * MAX_CELL_VOLTAGE)
 
-                    logger.info(f"throttling charger, cell-high: {maxCellVoltage:.3f} > MAX_CELL_VOLTAGE: {MAX_CELL_VOLTAGE:.3f}V, aboveVolt: {aboveVolt:.3f}V")
+                    if (self.control_voltage == None) or (chargevoltage != self.control_voltage):
+                        logger.info(f"throttling charger, cell-high: {maxCellVoltage:.3f} > MAX_CELL_VOLTAGE: {MAX_CELL_VOLTAGE:.3f}V, aboveVolt: {aboveVolt:.3f}V")
 
-                else:
+                # else:
+                    # logger.info(f"keep charger, cell-high: {maxCellVoltage:.3f}, aboveVolt: {aboveVolt:.3f}V")
 
-                    logger.info(f"keep charger, cell-high: {maxCellVoltage:.3f}, aboveVolt: {aboveVolt:.3f}V")
-
-            logger.info(f"setting control_voltage: {chargevoltage:.3f}V, control_discharge_current: {str(self.control_discharge_current)}A")
+            # logger.info(f"setting control_voltage: {chargevoltage:.3f}V, control_discharge_current: {str(self.control_discharge_current)}A")
             self.control_voltage = chargevoltage
 
             return

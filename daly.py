@@ -65,6 +65,7 @@ class Daly(Battery):
         self.max_battery_current = MAX_BATTERY_CURRENT
         self.max_battery_discharge_current = MAX_BATTERY_DISCHARGE_CURRENT
 
+        """
         # query initial battery discharge (control_discharge_current) current from inverter
         dummy = {'code': None, 'whenToLog': 'configChange', 'accessLevel': None}
         dbus_tree = {
@@ -85,6 +86,7 @@ class Daly(Battery):
             i = self.dbusmonitor.get_value(vecan_service, "/Link/DischargeCurrent")
             logger.info(f"current discharge current setting: {i}")
             self.control_discharge_current = i
+        """
 
         return True
 
@@ -347,13 +349,13 @@ class Daly(Battery):
                 for idx in range(self.cell_count):
                     self.cells.append(Cell(True))
 
-            s="cell voltages: "
+            # s="cell voltages: "
             for cellno in range(self.cell_count):
                 cv = cellVoltages[cellno]
                 self.cells[cellno].voltage = cv
                 # logger.info(f"cell {cellno}: {cv}")
-                s += f"{cv} "
-            logger.info(s)
+                # s += f"{cv} "
+            # logger.info(s)
 
         else:
             logger.warning("read_cells_volts(): no cell_count!")

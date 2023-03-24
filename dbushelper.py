@@ -156,7 +156,7 @@ class DbusHelper:
 
     def publish_battery(self, loop):
         # This is called every battery.poll_interval milli second as set up per battery type to read and update the data
-        logger.info("*** PUBLISH_BATTERY ***\n")
+        # logger.info("*** PUBLISH_BATTERY ***\n")
         try:
             error_count = 0
             # Call the battery's refresh_data function
@@ -196,7 +196,7 @@ class DbusHelper:
             loop.quit()
             return False
 
-        logger.info("*** end ***")
+        # logger.info("*** end ***")
         return True
 
     def publish_dbus(self):
