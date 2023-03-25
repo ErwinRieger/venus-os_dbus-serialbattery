@@ -164,7 +164,7 @@ def read_serialport_data(ser, command, length_pos, length_check, length_fixed=No
             toread = ser.inWaiting()
             count += 1
             if count > 150:
-                logger.error(">>> ERROR: No reply - returning")
+                # logger.error(">>> ERROR: No reply - returning")
                 return False
                 
         #logger.info('serial data toread ' + str(toread))
