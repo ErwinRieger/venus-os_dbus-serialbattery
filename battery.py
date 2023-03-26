@@ -160,7 +160,7 @@ class Battery(object):
 
                 chargevoltage = MAX_CELL_VOLTAGE * self.cell_count
                 if (self.control_voltage == None) or (chargevoltage > self.control_voltage):
-                    logger.info(f"un-throttling charger, cell-high: {maxCellVoltage:.3f} < MAX_CELL_VOLTAGE: {MAX_CELL_VOLTAGE:.3f}V")
+                    logger.info(f"Un-throttling charger, cell-high: {maxCellVoltage:.3f} (max. {MAX_CELL_VOLTAGE:.3f}V), set charge voltage to {chargevoltage:.3f}V")
 
             else:
 
@@ -170,7 +170,7 @@ class Battery(object):
                                         self.cell_count * MAX_CELL_VOLTAGE)
 
                     if (self.control_voltage == None) or (chargevoltage != self.control_voltage):
-                        logger.info(f"throttling charger, cell-high: {maxCellVoltage:.3f} > MAX_CELL_VOLTAGE: {MAX_CELL_VOLTAGE:.3f}V, aboveVolt: {aboveVolt:.3f}V")
+                        logger.info(f"Throttling charger, cell-high: {maxCellVoltage:.3f} (max. {MAX_CELL_VOLTAGE:.3f}V), aboveVolt: {aboveVolt:.3f}V, set charge voltage to {chargevoltage:.3f}V")
 
                 # else:
                     # logger.info(f"keep charger, cell-high: {maxCellVoltage:.3f}, aboveVolt: {aboveVolt:.3f}V")
