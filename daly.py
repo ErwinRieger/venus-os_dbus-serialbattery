@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
-from __future__ import absolute_import, division, print_function, unicode_literals
-from battery import Protection, Battery, Cell
+from battery import Battery, Cell
 from utils import *
 from struct import *
 
-from dbusmonitor import DbusMonitor
+# from dbusmonitor import DbusMonitor
 
 import math
 
@@ -90,6 +89,7 @@ class Daly(Battery):
 
         return True
 
+    """
     # returns a tuple (servicename, instance)
     def _get_service_having_lowest_instance(self, classfilter=None): 
         services = self._get_connected_service_list(classfilter=classfilter)
@@ -101,6 +101,7 @@ class Daly(Battery):
         services = self.dbusmonitor.get_service_list(classfilter=classfilter)
         # self._remove_unconnected_services(services)
         return services
+    """
 
     def refresh_data(self):
 

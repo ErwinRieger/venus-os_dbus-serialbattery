@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
-from __future__ import absolute_import, division, print_function, unicode_literals
+
 from utils import *
 import math
 from datetime import timedelta
-from time import time
 
 class Protection(object):
     # 2 = Alarm, 1 = Warning, 0 = Normal

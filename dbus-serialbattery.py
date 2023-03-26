@@ -1,18 +1,14 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-from __future__ import absolute_import, division, print_function, unicode_literals
 from time import sleep
 from dbus.mainloop.glib import DBusGMainLoop
-import dbus
 import sys
+
 if sys.version_info.major == 2:
     import gobject
 else:
     from gi.repository import GLib as gobject
-
-# Victron packages
-# from ve_utils import exit_on_error
 
 from dbushelper import DbusHelper
 from utils import DRIVER_VERSION, DRIVER_SUBVERSION, logger
