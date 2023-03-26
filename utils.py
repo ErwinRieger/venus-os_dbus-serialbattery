@@ -6,7 +6,8 @@ from time import sleep
 from struct import *
 
 # Logging
-logging.basicConfig()
+format = "%(asctime)s %(levelname)s:%(name)s:%(message)s"
+logging.basicConfig(level=logging.DEBUG, format=format, datefmt="%d.%m.%y_%X_%Z")
 logger = logging.getLogger("SerialBattery")
 logger.setLevel(logging.INFO)
 
