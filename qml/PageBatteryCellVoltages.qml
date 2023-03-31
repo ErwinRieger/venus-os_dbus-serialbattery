@@ -41,19 +41,23 @@ MbPage {
 	model: VisualItemModel {
 
 		MbItemRow {
-			description: qsTr("MinCell/MaxCell/Cells Sum")
+			description: qsTr("U / I / #Min / #Max")
 			values: [
+				MbTextBlock { item { bind: service.path("/Voltages/Sum") } width: 70; height: 25 },
+
+				MbTextBlock { item { bind: service.path("/Dc/0/Current") } width: 70; height: 25 },
+
 				MbTextBlock { item { bind: service.path("/System/MinVoltageCellId") } width: 70; height: 25 },
-				MbTextBlock { item { bind: service.path("/System/MaxVoltageCellId") } width: 70; height: 25 },
-				MbTextBlock { item { bind: service.path("/Voltages/Sum") } width: 70; height: 25 }
+				MbTextBlock { item { bind: service.path("/System/MaxVoltageCellId") } width: 70; height: 25 }
 			]
 		}
 		MbItemRow {
-			description: qsTr("Cells (Min/Max/Diff)")
+			description: qsTr("Cells (Diff/Min/Max)")
 			values: [
+				MbTextBlock { item { bind: service.path("/Voltages/Diff") } width: 70; height: 25 },
+
 				MbTextBlock { item { bind: service.path("/System/MinCellVoltage") } width: 70; height: 25 },
-				MbTextBlock { item { bind: service.path("/System/MaxCellVoltage") } width: 70; height: 25 },
-				MbTextBlock { item { bind: service.path("/Voltages/Diff") } width: 70; height: 25 }
+				MbTextBlock { item { bind: service.path("/System/MaxCellVoltage") } width: 70; height: 25 }
 			]
 		}
 		MbItemRow {
