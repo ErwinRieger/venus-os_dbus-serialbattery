@@ -28,7 +28,7 @@ MAX_BATTERY_DISCHARGE_CURRENT = 250.0 # manne: 100
 
 # Some daly bms have a very unsteady current measurement, enable
 # this to average the current values from bms.
-SMOOTH_BMS_CURRENT = False # manne: True
+SMOOTH_BMS_CURRENT = True
 
 #
 # CCCM, CVL, CCL, DCL, CVCL
