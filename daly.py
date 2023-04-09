@@ -107,8 +107,9 @@ class Daly(Battery):
 
         if not self.read_cell_voltage_range_data(self.ser): return False
         if not self.read_cells_volts(self.ser): return False
+        if not self.read_soc_data(self.ser): return False # read current und update current average frequently
 
-        read_methods = [ self.read_alarm_data, self.read_temperature_range_data, self.read_soc_data, self.read_fed_data ]
+        read_methods = [ self.read_alarm_data, self.read_temperature_range_data, self.read_fed_data ]
         result = read_methods[self.poll_step](self.ser)
         if result:
             self.poll_step += 1
