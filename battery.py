@@ -46,6 +46,7 @@ class Battery(object):
         self.capacity = None
         self.cycles = None
         self.total_ah_drawn = None
+
         self.production = None
         self.protection = Protection()
         self.version = None
@@ -57,13 +58,7 @@ class Battery(object):
         self.temp1 = None
         self.temp2 = None
         self.cells = []
-        self.control_charging = None
         self.control_voltage = None
-        self.allow_max_voltage = True
-        self.max_voltage_start_time = None
-        self.control_current = None
-        self.control_previous_total = None
-        self.control_previous_max = None
         self.control_discharge_current = None # xxx remove me: not set in daly.py:get_settings()
         self.control_charge_current = None
         self.control_allow_charge = None
