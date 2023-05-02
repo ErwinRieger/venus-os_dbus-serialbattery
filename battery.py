@@ -164,7 +164,7 @@ class Battery(object):
 
             else:
 
-                if aboveVolt > 0.050: # allow for 50mV hysteresis to avoid frequent voltage changes
+                if aboveVolt > 0.025: # allow for 25mV hysteresis to avoid frequent voltage changes
 
                     chargevoltage = min(voltageSum - aboveVolt,
                                         self.cell_count * MAX_CELL_VOLTAGE)
