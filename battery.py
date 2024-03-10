@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 
 from utils import *
-import math
+import math, time
 from datetime import timedelta
+
+import libup
 
 class Protection(object):
     # 2 = Alarm, 1 = Warning, 0 = Normal
@@ -68,6 +70,14 @@ class Battery(object):
         
         self.time_to_soc_update = TIME_TO_SOC_LOOP_CYCLES
 
+        # charging/balancing
+        # XXX unterscheidung verschiedene balancer !!!!!!!!!!!!!
+        self.mqttBalancer = libup.MqttSwitch("PVBalancerPack1", "cmnd/tasmota_balancerrel/POWER", rate=300)
+        self.chargmode = 0 # 0: boost, 1: balancing/float/absorb
+        self.balancing = False
+        self.balanced = False
+        self.pdWait = 300 # seconds to wait for balancer startup
+
     def test_connection(self):
         # Each driver must override this function to test if a connection can be made
         # return false when fail, true if successful
@@ -106,20 +116,11 @@ class Battery(object):
                 return
             """
 
-            aboveVolt = 0
-            for cell in self.cells:
-                voltage = cell.voltage
-                if voltage:
-                    voltageSum+=voltage
-                    if voltage > MAX_CELL_VOLTAGE:
-                        aboveVolt += voltage - MAX_CELL_VOLTAGE
-
             minCellVoltage = self.get_min_cell_voltage()
             maxCellVoltage = self.get_max_cell_voltage()
+            cellDiff = maxCellVoltage - minCellVoltage
 
             # logger.info(f"Batt voltage (sum): {voltageSum:.3f}V, cell-low: {minCellVoltage:.3f}V, cell-high: {maxCellVoltage:.3f}, diff: {(maxCellVoltage-minCellVoltage)*1000:.2f}mV")
-
-            assert((minCellVoltage >= 2) and (minCellVoltage < 4))
 
             # Make min cell-voltage somewhat current-dependent, add up to 0.1V for 1C discharge current
             minCellAdjusted = MIN_CELL_VOLTAGE
@@ -147,36 +148,97 @@ class Battery(object):
             # else:
                 # logger.info(f"keep inverter, minCellAdjusted: {minCellAdjusted:.3f}V < cell-low {minCellVoltage:.3f}V < RECONNECTCELLVOLTAGE: {RECONNECTCELLVOLTAGE:.3f}V")
 
-            assert((maxCellVoltage >= 2) and (maxCellVoltage < 4))
-
             if self.control_voltage == None:
                 # Initial case
                 chargevoltage = voltageSum
             else:
                 chargevoltage = self.control_voltage
 
-            # start charging if all cells below max cell voltage
-            if maxCellVoltage < MAX_CELL_VOLTAGE:
+            if self.chargmode == 0:
 
-                chargevoltage = MAX_CELL_VOLTAGE * self.cell_count
-                if (self.control_voltage == None) or (chargevoltage > self.control_voltage):
-                    logger.info(f"Un-throttling charger, cell-high: {maxCellVoltage:.3f} (max. {MAX_CELL_VOLTAGE:.3f}V), set charge voltage to {chargevoltage:.3f}V")
+                # bulk
+                # dynamic bulk charging voltage, depends on charging-current
+                if self.balanced:
+                    bcv = 3.40
+                elif self.balancing:
+                    bcv = 3.45
+                else:
+                    bcv = max(3.45, 3.40 + (3.6-3.40) * round( self.current / BATTERY_CAPACITY , 2))
 
-            else:
+                ###################################################
+                aboveVolt = 0
+                for cell in self.cells:
+                    voltage = cell.voltage
+                    voltageSum+=voltage
+                    if voltage > bcv:
+                        aboveVolt += voltage - bcv
 
-                if aboveVolt > 0.025: # allow for 25mV hysteresis to avoid frequent voltage changes
+                # start charging if all cells below max cell voltage
+                if maxCellVoltage < bcv:
 
-                    chargevoltage = min(voltageSum - aboveVolt,
-                                        self.cell_count * MAX_CELL_VOLTAGE)
+                    chargevoltage = bcv * self.cell_count
+                    if chargevoltage != self.control_voltage:
+                        logger.info(f"Un-throttling charger, cell-high: {maxCellVoltage:.3f}, bcv: {bcv:.3f}V, bal: {self.balancing}, balanced: {self.balanced}")
 
-                    if (self.control_voltage == None) or (chargevoltage != self.control_voltage):
-                        logger.info(f"Throttling charger, cell-high: {maxCellVoltage:.3f} (max. {MAX_CELL_VOLTAGE:.3f}V), aboveVolt: {aboveVolt:.3f}V, set charge voltage to {chargevoltage:.3f}V")
+                else:
 
-                # else:
-                    # logger.info(f"keep charger, cell-high: {maxCellVoltage:.3f}, aboveVolt: {aboveVolt:.3f}V")
+                    if aboveVolt > 0.025: # allow for 25mV hysteresis to avoid frequent voltage changes
+                        chargevoltage = min(voltageSum - aboveVolt, self.cell_count * bcv)
 
-            # logger.info(f"setting control_voltage: {chargevoltage:.3f}V, control_discharge_current: {str(self.control_discharge_current)}A")
+                        if chargevoltage != self.control_voltage:
+                            logger.info(f"Throttling charger, cell-high: {maxCellVoltage:.3f}, bcv: {bcv:.3f}V, aboveVolt: {aboveVolt:.3f}V, bal: {self.balancing}, balanced: {self.balanced}")
+
+                    # else:
+                        # logger.info(f"keep charger, cell-high: {maxCellVoltage:.3f}, aboveVolt: {aboveVolt:.3f}V")
+                ###################################################
+                """
+                    # at least one cell reached bulk charging end voltage
+                    logger.info(f"switch to balancing mode, cell-high: {maxCellVoltage:.3f}V")
+                    # self.chargmode = 1 # boost, 1: glättung, 2: float/absorb
+                    chargevoltage = 3.45 * self.cell_count
+                """
+
+                # Start balancing mode if cell-voltage above 3.45v and current < 2.5%C
+                if maxCellVoltage >= 3.45 and self.current < (BATTERY_CAPACITY*.025):
+                    self.balancing = True
+
+                # Lower voltage to float voltage when battery is balanced
+                if maxCellVoltage >= 3.4 and cellDiff < 0.005:
+                    self.balanced = True
+
+                if maxCellVoltage < 3.375:
+                    self.balancing = False
+
+                if time.localtime().tm_hour == 0:
+                    self.balancing = False
+                    self.balanced = False
+
+            elif self.chargmode == 1: 
+
+                if maxCellVoltage < 3.375:
+                    # re-start boost mode
+                    logger.info(f"mode 1: switch to boost mode, cell-high: {maxCellVoltage:.3f}V")
+                    self.chargmode = 0 # boost
+                    self.balancing = False
+                else:
+                    if not self.balancing:
+                        logger.info(f"mode 1: starting balancer cell: {maxCellVoltage:.3f}V")
+                        self.balancing = True # start balancer, takes some time to be ready
+
+            # else:
+                # error
+                # assert(0); # xxxxxxxxxxx!!
+
+            if chargevoltage != self.control_voltage:
+                logger.info(f"setting control_voltage: {chargevoltage:.3f}V (cur: {self.current}), control_discharge_current: {str(self.control_discharge_current)}A, bal: {self.balancing}, balanced: {self.balanced}")
             self.control_voltage = chargevoltage
+
+            return
+
+            if self.balancing:
+                self.mqttBalancer.publish("on")
+            else:
+                self.mqttBalancer.publish("off")
 
             return
 
@@ -341,6 +403,9 @@ class Battery(object):
             return None, None
 
     def get_balancing(self):
+
+        return self.balancing
+
         for c in range(min(len(self.cells), self.cell_count)):
             if self.cells[c].balance is not None and self.cells[c].balance:
                 return 1
