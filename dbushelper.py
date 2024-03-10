@@ -190,7 +190,7 @@ class DbusHelper:
             logger.error(f"publish_battery(): un-caught OSError exception, errno: {e.errno} restarting...")
             loop.quit()
             return False
-        except:
+        except Exception as e:
             logger.exception(e)
             logger.warning("publish_battery: un-caught exception, restarting...")
             loop.quit()
