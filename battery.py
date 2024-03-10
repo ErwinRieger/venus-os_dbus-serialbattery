@@ -4,7 +4,7 @@ from utils import *
 import math, time
 from datetime import timedelta
 
-import libup
+# import libup
 
 class Protection(object):
     # 2 = Alarm, 1 = Warning, 0 = Normal
@@ -72,7 +72,7 @@ class Battery(object):
 
         # charging/balancing
         # XXX unterscheidung verschiedene balancer !!!!!!!!!!!!!
-        self.mqttBalancer = libup.MqttSwitch("PVBalancerPack1", "cmnd/tasmota_balancerrel/POWER", rate=300)
+        # self.mqttBalancer = libup.MqttSwitch("PVBalancerPack1", "cmnd/tasmota_balancerrel/POWER", rate=300)
         self.chargmode = 0 # 0: boost, 1: balancing/float/absorb
         self.balancing = False
         self.balanced = False
