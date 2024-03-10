@@ -49,8 +49,7 @@ MIDPOINT_ENABLE = False
 
 # Daly settings
 # Battery capacity (amps) if the BMS does not support reading it 
-# BATTERY_CAPACITY = 50
-BATTERY_CAPACITY = 450 # manne: 75
+BATTERY_CAPACITY = 50
 # Invert Battery Current. Default non-inverted. Set to -1 to invert
 INVERT_CURRENT_MEASUREMENT = -1
 
@@ -82,6 +81,21 @@ GREENMETER_ADDRESS = 1
 # LIPRO_START_ADDRESS = 2
 # LIPRO_END_ADDRESS = 4
 LIPRO_CELL_COUNT = 15
+
+
+#
+# Import loal settings
+#
+print("BATTERY_CAPACITY: ", BATTERY_CAPACITY)
+try:
+    print("trying to import local settings...")
+    from utils_local import *
+    print("import local settings ok")
+except ModuleNotFoundError:
+    print("no local settings ...")
+else:
+    print("BATTERY_CAPACITY now: ", BATTERY_CAPACITY)
+
 
 def is_bit_set(tmp):
     return False if tmp == zero_char else True
