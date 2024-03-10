@@ -86,15 +86,15 @@ LIPRO_CELL_COUNT = 15
 #
 # Import loal settings
 #
-print("BATTERY_CAPACITY: ", BATTERY_CAPACITY)
+logger.info(f"BATTERY_CAPACITY: {BATTERY_CAPACITY}")
 try:
-    print("trying to import local settings...")
+    logger.info("trying to import local settings...")
     from utils_local import *
-    print("import local settings ok")
+    logger.info("import local settings ok")
 except ModuleNotFoundError:
-    print("no local settings ...")
+    logger.info("no local settings ...")
 else:
-    print("BATTERY_CAPACITY now: ", BATTERY_CAPACITY)
+    logger.info(f"BATTERY_CAPACITY now: {BATTERY_CAPACITY}")
 
 
 def is_bit_set(tmp):
