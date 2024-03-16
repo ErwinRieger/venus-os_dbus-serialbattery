@@ -9,9 +9,9 @@ from datetime import timedelta
 # BULKENDCURR = (BATTERY_CAPACITY*.025)
 BULKENDCURR = 1 # [A], note: balancer has 4A, only
 THTime = 60 # [s]
-THTime =  3 # debug
+# THTime =  3 # debug
 BalanceTime = 30 * 60 # [s]
-BalanceTime =  5 # debug
+# BalanceTime =  5 # debug
 
 logger.info(f"BULKENDCURR: {BULKENDCURR}")
 
@@ -81,7 +81,7 @@ class StateBal(State):
             logger.info(f"Balancing state: switching to float, balanced time: {self.baltime.value} seconds")
             battery.chargerSM.setState(battery.chargerSM.stateFloat)
         else:
-            if battery.get_max_cell_voltage() < 3.375:
+            if battery.get_min_cell_voltage() < 3.375:
                 self.dsctime.add(battery.poll_interval/1000)
 
             if self.dsctime.ok():
@@ -106,7 +106,7 @@ class StateFloat(State):
 
     def run(self, battery):
 
-        if battery.get_max_cell_voltage() < 3.375:
+        if battery.get_min_cell_voltage() < 3.375:
             self.dsctime.add(battery.poll_interval/1000)
 
         if self.dsctime.ok():
