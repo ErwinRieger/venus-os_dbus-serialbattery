@@ -335,6 +335,7 @@ class Battery(object):
                     if chargevoltage != self.control_voltage:
                         logger.info(f"Throttling charger, cell-high: {maxCellVoltage:.3f}, bcv: {bcv:.3f}V, aboveVolt: {aboveVolt:.3f}V, bal: {self.balancing}, balanced: {balanced}")
 
+            self.control_voltage = chargevoltage
             return
 
     def manage_charge_current(self):
