@@ -203,12 +203,14 @@ class Battery(object):
                     self.balancing = True
 
                 # Lower voltage to float voltage when battery is balanced
+                # xxx use gradual decrease of charging value here
                 if maxCellVoltage >= 3.4 and cellDiff < 0.005:
                     self.balanced = True
 
                 if maxCellVoltage < 3.375:
                     self.balancing = False
 
+                # Reset balancing state at midnight
                 if time.localtime().tm_hour == 0:
                     self.balancing = False
                     self.balanced = False
