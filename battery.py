@@ -224,6 +224,8 @@ class Battery(object):
         self.chargerSM = ChgStateMachine("ChargerStateMachine")
         self.chargerSM.setState(self.chargerSM.stateBulk)
 
+        self.dbgcount = 10
+
     def test_connection(self):
         # Each driver must override this function to test if a connection can be made
         # return false when fail, true if successful
@@ -294,12 +296,6 @@ class Battery(object):
             # else:
                 # logger.info(f"keep inverter, minCellAdjusted: {minCellAdjusted:.3f}V < cell-low {minCellVoltage:.3f}V < RECONNECTCELLVOLTAGE: {RECONNECTCELLVOLTAGE:.3f}V")
 
-            if self.control_voltage == None:
-                # Initial case
-                chargevoltage = voltageSum
-            else:
-                chargevoltage = self.control_voltage
-
             ###################################################
             self.chargerSM.run(self)
             bcv = self.chargerSM.bcv(self)
@@ -320,6 +316,12 @@ class Battery(object):
 
             balanced = self.chargerSM.stateBal.isBalanced()
 
+            if self.control_voltage == None:
+                # Initial case
+                chargevoltage = voltageSum
+            else:
+                chargevoltage = self.control_voltage
+
             # start charging if all cells below max cell voltage
             if maxCellVoltage < bcv:
 
@@ -334,6 +336,10 @@ class Battery(object):
 
                     if chargevoltage != self.control_voltage:
                         logger.info(f"Throttling charger, cell-high: {maxCellVoltage:.3f}, bcv: {bcv:.3f}V, aboveVolt: {aboveVolt:.3f}V, bal: {self.balancing}, balanced: {balanced}")
+
+            if self.dbgcount:
+                logger.info(f"state: {self.chargerSM.state.name}, cell-high: {maxCellVoltage:.3f}, bcv: {bcv:.3f}V, bal: {self.balancing}, balanced: {balanced}")
+                self.dbgcount -= 1
 
             self.control_voltage = chargevoltage
             return
