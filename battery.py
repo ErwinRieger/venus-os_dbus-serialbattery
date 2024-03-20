@@ -224,7 +224,7 @@ class Battery(object):
         self.chargerSM = ChgStateMachine("ChargerStateMachine")
         self.chargerSM.setState(self.chargerSM.stateBulk)
 
-        self.dbgcount = 10
+        self.dbgcount = 3570
 
     def test_connection(self):
         # Each driver must override this function to test if a connection can be made
@@ -324,24 +324,18 @@ class Battery(object):
 
             # start charging if all cells below max cell voltage
             if maxCellVoltage < bcv:
-
                 chargevoltage = bcv * self.cell_count
-                if chargevoltage != self.control_voltage:
-                    logger.info(f"Un-throttling charger, cell-high: {maxCellVoltage:.3f}, bcv: {bcv:.3f}V, bal: {self.balancing}, balanced: {balanced}")
-
             else:
-
                 if aboveVolt > 0.025: # allow for 25mV hysteresis to avoid frequent voltage changes
                     chargevoltage = min(voltageSum - aboveVolt, self.cell_count * bcv)
 
-                    if chargevoltage != self.control_voltage:
-                        logger.info(f"Throttling charger, cell-high: {maxCellVoltage:.3f}, bcv: {bcv:.3f}V, aboveVolt: {aboveVolt:.3f}V, bal: {self.balancing}, balanced: {balanced}")
-
-            if self.dbgcount:
-                logger.info(f"state: {self.chargerSM.state.name}, cell-high: {maxCellVoltage:.3f}, bcv: {bcv:.3f}V, bal: {self.balancing}, balanced: {balanced}")
-                self.dbgcount -= 1
+            if (chargevoltage != self.control_voltage) or (self.dbgcount == 3600):
+                logger.info(f"state: {self.chargerSM.state.name}, cur: {self.current:.1f}A, cell-high: {maxCellVoltage:.3f}V, above: {aboveVolt:.3f}V, bcv: {bcv:.3f}V, bal: {self.balancing}, balanced: {balanced}")
+                if self.dbgcount == 3600:
+                    self.dbgcount = 0
 
             self.control_voltage = chargevoltage
+            self.dbgcount += 1
             return
 
     def manage_charge_current(self):
