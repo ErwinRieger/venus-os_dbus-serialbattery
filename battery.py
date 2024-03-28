@@ -7,7 +7,7 @@ from datetime import timedelta
 # import libup
 
 # BULKENDCURR = (BATTERY_CAPACITY*.025)
-BULKENDCURR = 1 # [A], note: balancer has 4A, only
+BULKENDCURR = min(BATTERY_CAPACITY*.025, 4) # [A], note: balancer has 4A, only
 THTime = 60 # [s]
 # THTime =  3 # debug
 BalanceTime = 30 * 60 # [s]
@@ -16,14 +16,24 @@ BalanceTime = 30 * 60 # [s]
 logger.info(f"BULKENDCURR: {BULKENDCURR}")
 
 class ValueTimer(object):
-    def __init__(self, th_secs):
+    def __init__(self, name, th_secs):
+        self.name = name
         self.th = th_secs
-        self.value = 0
+        self._ok = False
+        self.reset()
     def add(self, v):
+        if not self.value:
+            print(f"state {self.name}: begin counting")
         self.value += v
+        if not self._ok and self.value > self.th:
+            print(f"state of value {self.name} changed to True ({self.value}s)")
+            self._ok = True
     def ok(self):
-        return self.value > self.th
+        return self._ok
     def reset(self):
+        if self._ok:
+            print(f"state of value {self.name} changed to False ({self.value}s)")
+            self._ok = False
         self.value = 0
 
 class State(object):
@@ -34,13 +44,15 @@ class StateBulk(State):
 
     def __init__(self):
         super(StateBulk, self).__init__("bulkCharging")
-        self.cc = ValueTimer(THTime)
+        self.cc = ValueTimer(f"ChargingCurrent<{BULKENDCURR}", THTime)
 
     def run(self, battery):
         # change state if:
         # * charging current falls below BULKENDCURR
         if battery.current <= BULKENDCURR and battery.get_max_cell_voltage() >= 3.45:
             self.cc.add(battery.poll_interval/1000)
+        else:
+            self.cc.reset()
 
         if self.cc.ok():
             # Switch to balancing state
@@ -59,8 +71,8 @@ class StateBal(State):
 
     def __init__(self):
         super(StateBal, self).__init__("stateBalancing")
-        self.baltime = ValueTimer(BalanceTime)
-        self.dsctime = ValueTimer(THTime)
+        self.baltime = ValueTimer("BalanceTime", BalanceTime)
+        self.dsctime = ValueTimer("Discharging", THTime)
 
     def isBalanced(self):
         return self.baltime.ok()
@@ -83,6 +95,8 @@ class StateBal(State):
         else:
             if battery.get_min_cell_voltage() < 3.375:
                 self.dsctime.add(battery.poll_interval/1000)
+            else:
+                self.dsctime.reset()
 
             if self.dsctime.ok():
                 # Switch to bulk state
@@ -102,12 +116,14 @@ class StateFloat(State):
 
     def __init__(self):
         super(StateFloat, self).__init__("stateFloat")
-        self.dsctime = ValueTimer(THTime)
+        self.dsctime = ValueTimer("Discharging", THTime)
 
     def run(self, battery):
 
         if battery.get_min_cell_voltage() < 3.375:
             self.dsctime.add(battery.poll_interval/1000)
+        else:
+            self.dsctime.reset()
 
         if self.dsctime.ok():
             # Switch to bulk state
@@ -571,7 +587,7 @@ class Battery(object):
 
 if __name__ == "__main__":
     b = Battery("xport", 999)
-    b.current = 7.5
+    b.current = BULKENDCURR + 5
     b.cell_count = 16
     print(b)
 
@@ -584,7 +600,7 @@ if __name__ == "__main__":
             # print(f"batt: cell_min_voltage: {b.cell_min_voltage}")
             # print(f"batt: cell_max_voltage: {b.cell_max_voltage}")
             if b.current > 0:
-                b.current = max(0, b.current-3)
+                b.current = max(0, b.current-1)
 
         # print(f"batt: cur: {b.current}")
 
