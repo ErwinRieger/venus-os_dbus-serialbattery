@@ -23,7 +23,7 @@ class Daly(Battery):
         self.type = self.BATTERYTYPE
 
         # SMOOTH_BMS_CURRENT
-        self.currentAvg = 10 * [0]
+        self.currentAvg = 5 * [0]
         self.iavg = 0
 
         # Mod erri
