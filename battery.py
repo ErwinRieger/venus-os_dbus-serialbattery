@@ -330,7 +330,7 @@ class Battery(object):
                     chargevoltage = min(voltageSum - aboveVolt, self.cell_count * bcv)
 
             if (chargevoltage != self.control_voltage) or (self.dbgcount == 3600):
-                logger.info(f"state: {self.chargerSM.state.name}, cur: {self.current:.1f}A, cell-high: {maxCellVoltage:.3f}V, above: {aboveVolt:.3f}V, bcv: {bcv:.3f}V, bal: {self.balancing}, balanced: {balanced}")
+                logger.info(f"{self.chargerSM.state.name}, {self.current:.1f}A, cellhigh: {maxCellVoltage:.3f}V, above: {aboveVolt:.3f}V, bcv: {bcv:.3f}V, cv: {chargevoltage:.3f}V, bal: {self.balancing}, balanced: {balanced}")
                 if self.dbgcount == 3600:
                     self.dbgcount = 0
 
