@@ -6,14 +6,24 @@ from datetime import timedelta
 
 # import libup
 
-# BULKENDCURR = (BATTERY_CAPACITY*.025)
-BULKENDCURR = min(BATTERY_CAPACITY*.025, 4) # [A], note: balancer has 4A, only
+
+#
+# eve standard charge:
+# * 0.5C charging current
+# * 3.65V charging voltage
+# * 0.05C cut off current
+#
+C50 = BATTERY_CAPACITY / 2
+CUTOFFCURR = BATTERY_CAPACITY*0.05 # [A]
 THTime = 60 # [s]
 # THTime =  3 # debug
 BalanceTime = 30 * 60 # [s]
 # BalanceTime =  5 # debug
 
-logger.info(f"BULKENDCURR: {BULKENDCURR}")
+logger.info(f"CUTOFFCURR: {CUTOFFCURR}")
+
+def inBalancingWindow(v):
+    return v>=3.4
 
 class ValueTimer(object):
     def __init__(self, name, th_secs):
@@ -40,16 +50,20 @@ class State(object):
     def __init__(self, name):
         self.name = name
 
+u0 = 3.375 # i=0
+umax = 3.65 # i=0.5C
+vrange = umax - u0
+
 class StateBulk(State):
 
     def __init__(self):
         super(StateBulk, self).__init__("bulkCharging")
-        self.cc = ValueTimer(f"ChargingCurrent<{BULKENDCURR}", THTime)
+        self.cc = ValueTimer(f"ChargingCurrent<{CUTOFFCURR}", THTime)
 
     def run(self, battery):
         # change state if:
-        # * charging current falls below BULKENDCURR
-        if battery.current <= BULKENDCURR and battery.get_max_cell_voltage() >= 3.45:
+        # * charging current is in CUTOFFCURR window
+        if abs(battery.current) <= CUTOFFCURR and battery.get_max_cell_voltage() >= 3.45:
             self.cc.add(battery.poll_interval/1000)
         else:
             self.cc.reset()
@@ -61,7 +75,8 @@ class StateBulk(State):
 
     def bcv(self, battery):
         # bulk, dynamic charging voltage, depends on charging-current
-        bcv = max(3.45, 3.40 + (3.6-3.40) * round( battery.current / BATTERY_CAPACITY , 2))
+        # bcv = max(3.45, 3.40 + (3.6-3.40) * round( battery.current / C50 , 2))
+        bcv = max(3.45, u0 + vrange * round( battery.current / C50 , 2))
         return bcv
 
     def reset(self):
@@ -93,7 +108,9 @@ class StateBal(State):
             logger.info(f"Balancing state: switching to float, balanced time: {self.baltime.value} seconds")
             battery.chargerSM.setState(battery.chargerSM.stateFloat)
         else:
-            if battery.get_min_cell_voltage() < 3.375:
+            # if battery.get_min_cell_voltage() < 3.375:
+            # charging current is in CUTOFFCURR window
+            if abs(battery.current) > CUTOFFCURR:
                 self.dsctime.add(battery.poll_interval/1000)
             else:
                 self.dsctime.reset()
@@ -229,7 +246,7 @@ class Battery(object):
         self.control_allow_charge = None
         # max battery charge/discharge current
         self.max_battery_current = None
-        self.max_battery_discharge_current = BATTERY_CAPACITY * 0.5 # initial value
+        self.max_battery_discharge_current = C50 # initial value
         
         self.time_to_soc_update = TIME_TO_SOC_LOOP_CYCLES
 
@@ -587,7 +604,7 @@ class Battery(object):
 
 if __name__ == "__main__":
     b = Battery("xport", 999)
-    b.current = BULKENDCURR + 5
+    b.current = 350 #CUTOFFCURR + 5
     b.cell_count = 16
     print(b)
 
@@ -600,7 +617,7 @@ if __name__ == "__main__":
             # print(f"batt: cell_min_voltage: {b.cell_min_voltage}")
             # print(f"batt: cell_max_voltage: {b.cell_max_voltage}")
             if b.current > 0:
-                b.current = max(0, b.current-1)
+                b.current = max(0, b.current-25)
 
         # print(f"batt: cur: {b.current}")
 
@@ -627,7 +644,7 @@ if __name__ == "__main__":
         if i == 45:
             b.chargerSM.stateBal.resetDayly()
 
-        time.sleep(1)
+        time.sleep(0.5)
         i += 1
 
 
