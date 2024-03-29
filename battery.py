@@ -16,9 +16,9 @@ from datetime import timedelta
 C50 = BATTERY_CAPACITY / 2
 CUTOFFCURR = BATTERY_CAPACITY*0.05 # [A]
 THTime = 60 # [s]
-# THTime =  3 # debug
+THTime =  5 # debug
 BalanceTime = 30 * 60 # [s]
-# BalanceTime =  5 # debug
+BalanceTime =  10 # debug
 
 logger.info(f"CUTOFFCURR: {CUTOFFCURR}")
 
@@ -110,7 +110,7 @@ class StateBal(State):
         else:
             # if battery.get_min_cell_voltage() < 3.375:
             # charging current is in CUTOFFCURR window
-            if abs(battery.current) > CUTOFFCURR:
+            if abs(battery.current) > CUTOFFCURR or battery.get_max_cell_voltage() < 3.4:
                 self.dsctime.add(battery.poll_interval/1000)
             else:
                 self.dsctime.reset()
@@ -622,7 +622,7 @@ if __name__ == "__main__":
         # print(f"batt: cur: {b.current}")
 
         if b.chargerSM.state == b.chargerSM.stateBal:
-            b.cell_min_voltage = 3.395
+            b.cell_min_voltage = 3.399
             b.cell_max_voltage = b.cell_min_voltage + random.randrange(3, 7)/1000 
             # print(f"batt: cell_min_voltage: {b.cell_min_voltage}")
             # print(f"batt: cell_max_voltage: {b.cell_max_voltage}")
