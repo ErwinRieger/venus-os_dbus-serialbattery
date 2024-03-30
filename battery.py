@@ -16,9 +16,9 @@ from datetime import timedelta
 C50 = BATTERY_CAPACITY / 2
 CUTOFFCURR = BATTERY_CAPACITY*0.05 # [A]
 THTime = 60 # [s]
-THTime =  5 # debug
+# THTime =  5 # debug
 BalanceTime = 30 * 60 # [s]
-BalanceTime =  10 # debug
+# BalanceTime =  10 # debug
 
 logger.info(f"CUTOFFCURR: {CUTOFFCURR}")
 
@@ -33,16 +33,16 @@ class ValueTimer(object):
         self.reset()
     def add(self, v):
         if not self.value:
-            print(f"state {self.name}: begin counting")
+            logger.info(f"state {self.name}: begin counting")
         self.value += v
         if not self._ok and self.value > self.th:
-            print(f"state of value {self.name} changed to True ({self.value}s)")
+            logger.info(f"state of value {self.name} changed to True ({self.value}s)")
             self._ok = True
     def ok(self):
         return self._ok
     def reset(self):
         if self._ok:
-            print(f"state of value {self.name} changed to False ({self.value}s)")
+            logger.info(f"state of value {self.name} changed to False ({self.value}s)")
             self._ok = False
         self.value = 0
 
@@ -76,7 +76,10 @@ class StateBulk(State):
     def bcv(self, battery):
         # bulk, dynamic charging voltage, depends on charging-current
         # bcv = max(3.45, 3.40 + (3.6-3.40) * round( battery.current / C50 , 2))
-        bcv = max(3.45, u0 + vrange * round( battery.current / C50 , 2))
+        bcv = max(
+                3.45,
+                min( u0 + vrange * round( battery.current / C50 , 2), 3.55 )
+                )
         return bcv
 
     def reset(self):
