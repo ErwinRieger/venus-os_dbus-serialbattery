@@ -1,11 +1,9 @@
 # -*- coding: utf-8 -*-
 
-from utils import *
 import math, time, random
 from datetime import timedelta
 
 # import libup
-
 
 #
 # eve standard charge:
@@ -13,12 +11,13 @@ from datetime import timedelta
 # * 3.65V charging voltage
 # * 0.05C cut off current
 #
+THTime = 60 # [s]
+BalanceTime = 30 * 60 # [s]
+
+from utils import *
+
 C50 = BATTERY_CAPACITY / 2
 CUTOFFCURR = BATTERY_CAPACITY*0.05 # [A]
-THTime = 60 # [s]
-# THTime =  5 # debug
-BalanceTime = 30 * 60 # [s]
-# BalanceTime =  10 # debug
 
 logger.info(f"CUTOFFCURR: {CUTOFFCURR}")
 
@@ -93,6 +92,8 @@ class StateBal(State):
         self.dsctime = ValueTimer("Discharging", THTime)
 
     def isBalanced(self):
+        # xxx debug remove
+        # return True
         return self.baltime.ok()
 
     def run(self, battery):
@@ -136,6 +137,7 @@ class StateFloat(State):
 
     def __init__(self):
         super(StateFloat, self).__init__("stateFloat")
+        self._bcv = 3.45
         self.dsctime = ValueTimer("Discharging", THTime)
 
     def run(self, battery):
@@ -149,11 +151,17 @@ class StateFloat(State):
             # Switch to bulk state
             logger.info(f"Float state: switching to bulk after {self.dsctime.value} seconds discharge")
             battery.chargerSM.setState(battery.chargerSM.stateBulk)
+        else:
+            # gradual decrease charging voltage
+            if self._bcv >= 3.401:
+                self._bcv -= 0.001;
 
     def bcv(self, battery):
-        return 3.4
+        # return 3.4
+        return self._bcv
 
     def reset(self):
+        self._bcv = 3.45
         self.dsctime.reset()
 
 class ChgStateMachine(object):
@@ -256,6 +264,7 @@ class Battery(object):
         # charging/balancing
         # XXX unterscheidung verschiedene balancer !!!!!!!!!!!!!
         self.balancing = False
+        self.throttling = None
 
         self.chargerSM = ChgStateMachine("ChargerStateMachine")
         self.chargerSM.setState(self.chargerSM.stateBulk)
@@ -361,9 +370,11 @@ class Battery(object):
             # start charging if all cells below max cell voltage
             if maxCellVoltage < bcv:
                 chargevoltage = bcv * self.cell_count
+                self.throttling = False
             else:
                 if aboveVolt > 0.025: # allow for 25mV hysteresis to avoid frequent voltage changes
                     chargevoltage = min(voltageSum - aboveVolt, self.cell_count * bcv)
+                self.throttling = True
 
             if (chargevoltage != self.control_voltage) or (self.dbgcount == 3600):
                 logger.info(f"{self.chargerSM.state.name}, {self.current:.1f}A, cellhigh: {maxCellVoltage:.3f}V, above: {aboveVolt:.3f}V, bcv: {bcv:.3f}V, cv: {chargevoltage:.3f}V, bal: {self.balancing}, balanced: {balanced}")
@@ -371,6 +382,13 @@ class Battery(object):
                     self.dbgcount = 0
 
             self.control_voltage = chargevoltage
+
+            # # throttling flag
+            # t = ((self.chargerSM.state == self.chargerSM.stateBulk) and ) or 
+                # self.chargerSM.state == self.chargerSM.stateBal or
+                # self.chargerSM.state == self.chargerSM.stateFloat
+            self.throttling = True # xxx hack, remove
+
             self.dbgcount += 1
             return
 

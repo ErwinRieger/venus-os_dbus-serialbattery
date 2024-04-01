@@ -118,6 +118,7 @@ class DbusHelper:
         self._dbusservice.add_path('/History/ChargeCycles', None, writeable=True)
         self._dbusservice.add_path('/History/TotalAhDrawn', None, writeable=True)
         self._dbusservice.add_path('/Balancing', None, writeable=True)
+        self._dbusservice.add_path('/Throttling', None, writeable=True)
         self._dbusservice.add_path('/Io/AllowToCharge', 0, writeable=True)
         self._dbusservice.add_path('/Io/AllowToDischarge', 0, writeable=True)
         # self._dbusservice.add_path('/SystemSwitch',1,writeable=True)
@@ -247,6 +248,7 @@ class DbusHelper:
         self._dbusservice['/System/MinCellVoltage'] = self.battery.get_min_cell_voltage()
         self._dbusservice['/System/MaxCellVoltage'] = self.battery.get_max_cell_voltage()
         self._dbusservice['/Balancing'] = self.battery.get_balancing()
+        self._dbusservice['/Throttling'] = self.battery.throttling
 
         # Update the alarms
         self._dbusservice['/Alarms/LowVoltage'] = self.battery.protection.voltage_low
