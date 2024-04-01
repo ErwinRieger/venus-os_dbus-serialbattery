@@ -21,9 +21,6 @@ CUTOFFCURR = BATTERY_CAPACITY*0.05 # [A]
 
 logger.info(f"CUTOFFCURR: {CUTOFFCURR}")
 
-def inBalancingWindow(v):
-    return v>=3.4
-
 class ValueTimer(object):
     def __init__(self, name, th_secs):
         self.name = name
@@ -81,6 +78,13 @@ class StateBulk(State):
                 )
         return bcv
 
+    def chargePower(self, battery, voltageSum):
+        pnow = battery.current * voltageSum
+        return pnow
+
+    def throttling(self):
+        return bla
+
     def reset(self):
         self.cc.reset()
 
@@ -127,6 +131,12 @@ class StateBal(State):
     def bcv(self, battery):
         return 3.45
 
+    def chargePower(self, battery, voltageSum):
+        return 0
+
+    def throttling(self):
+        return True
+
     def reset(self):
         self.dsctime.reset()
 
@@ -159,6 +169,12 @@ class StateFloat(State):
     def bcv(self, battery):
         # return 3.4
         return self._bcv
+
+    def chargePower(self, battery, voltageSum):
+        return 0
+
+    def throttling(self):
+        return True
 
     def reset(self):
         self._bcv = 3.45
@@ -265,6 +281,7 @@ class Battery(object):
         # XXX unterscheidung verschiedene balancer !!!!!!!!!!!!!
         self.balancing = False
         self.throttling = None
+        self.bulkpower = 0
 
         self.chargerSM = ChgStateMachine("ChargerStateMachine")
         self.chargerSM.setState(self.chargerSM.stateBulk)
@@ -367,11 +384,11 @@ class Battery(object):
             else:
                 chargevoltage = self.control_voltage
 
-            # start charging if all cells below max cell voltage
+            # charging algo
             if maxCellVoltage < bcv:
                 chargevoltage = bcv * self.cell_count
                 self.throttling = False
-            else:
+            else: # maxCellVoltage >= bcv
                 if aboveVolt > 0.025: # allow for 25mV hysteresis to avoid frequent voltage changes
                     chargevoltage = min(voltageSum - aboveVolt, self.cell_count * bcv)
                 self.throttling = True
@@ -383,11 +400,8 @@ class Battery(object):
 
             self.control_voltage = chargevoltage
 
-            # # throttling flag
-            # t = ((self.chargerSM.state == self.chargerSM.stateBulk) and ) or 
-                # self.chargerSM.state == self.chargerSM.stateBal or
-                # self.chargerSM.state == self.chargerSM.stateFloat
-            self.throttling = True # xxx hack, remove
+            # self.throttling = self.chargerSM.throttling()
+            self.bulkpower = self.chargerSM.state.chargePower(self, voltageSum)
 
             self.dbgcount += 1
             return
