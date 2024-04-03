@@ -120,6 +120,7 @@ class DbusHelper:
         self._dbusservice.add_path('/Ess/Balancing', None, writeable=True)
         self._dbusservice.add_path('/Ess/Throttling', None, writeable=True)
         self._dbusservice.add_path('/Ess/Bulkpower', None, writeable=True)
+        self._dbusservice.add_path('/Ess/Prequest', None, writeable=True)
         self._dbusservice.add_path('/Io/AllowToCharge', 0, writeable=True)
         self._dbusservice.add_path('/Io/AllowToDischarge', 0, writeable=True)
         # self._dbusservice.add_path('/SystemSwitch',1,writeable=True)
@@ -251,6 +252,7 @@ class DbusHelper:
         self._dbusservice['/Ess/Balancing'] = self.battery.get_balancing()
         self._dbusservice['/Ess/Throttling'] = self.battery.throttling
         self._dbusservice['/Ess/Bulkpower'] = self.battery.bulkpower
+        self._dbusservice['/Ess/Prequest'] = self.battery.prequest
 
         # Update the alarms
         self._dbusservice['/Alarms/LowVoltage'] = self.battery.protection.voltage_low

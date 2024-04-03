@@ -78,8 +78,11 @@ class StateBulk(State):
                 )
         return bcv
 
-    def chargePower(self, battery, voltageSum):
-        pnow = battery.current * voltageSum
+    def chargePower(self, battery):
+        # pnow = battery.current * voltageSum
+        # pnow = max(CUTOFFCURR, battery.current) * battery.voltage
+        pnow = max(20, battery.current) * battery.voltage
+        return int( math.ceil( pnow )/25 )*25
         return pnow
 
     def throttling(self):
@@ -131,7 +134,7 @@ class StateBal(State):
     def bcv(self, battery):
         return 3.45
 
-    def chargePower(self, battery, voltageSum):
+    def chargePower(self, battery):
         return 0
 
     def throttling(self):
@@ -170,7 +173,7 @@ class StateFloat(State):
         # return 3.4
         return self._bcv
 
-    def chargePower(self, battery, voltageSum):
+    def chargePower(self, battery):
         return 0
 
     def throttling(self):
@@ -282,6 +285,7 @@ class Battery(object):
         self.balancing = False
         self.throttling = None
         self.bulkpower = 0
+        self.prequest = 0
 
         self.chargerSM = ChgStateMachine("ChargerStateMachine")
         self.chargerSM.setState(self.chargerSM.stateBulk)
@@ -387,6 +391,10 @@ class Battery(object):
             # charging algo
             if maxCellVoltage < bcv:
                 chargevoltage = bcv * self.cell_count
+                if self.chargerSM.state == self.chargerSM.stateFloat:
+                    if (bcv - maxCellVoltage) > 0.005:
+                        self.throttling = False
+                else:
                 self.throttling = False
             else: # maxCellVoltage >= bcv
                 if aboveVolt > 0.025: # allow for 25mV hysteresis to avoid frequent voltage changes
@@ -401,7 +409,8 @@ class Battery(object):
             self.control_voltage = chargevoltage
 
             # self.throttling = self.chargerSM.throttling()
-            self.bulkpower = self.chargerSM.state.chargePower(self, voltageSum)
+            self.bulkpower = self.chargerSM.state.chargePower(self)
+            self.prequest = self.chargerSM.state.chargePower(self)
 
             self.dbgcount += 1
             return
