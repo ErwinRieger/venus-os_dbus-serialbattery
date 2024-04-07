@@ -41,6 +41,8 @@ class ValueTimer(object):
             logger.info(f"state of value {self.name} changed to False ({self.value}s)")
             self._ok = False
         self.value = 0
+    def stateStr(self):
+        return f"{self.value}/{self.th}"
 
 class State(object):
     def __init__(self, name):
@@ -54,7 +56,7 @@ class StateBulk(State):
 
     def __init__(self):
         super(StateBulk, self).__init__("bulkCharging")
-        self.cc = ValueTimer(f"ChargingCurrent<{CUTOFFCURR}", THTime)
+        self.cc = ValueTimer(f"T-Cutoff", THTime)
 
     def run(self, battery):
         # change state if:
@@ -67,7 +69,7 @@ class StateBulk(State):
         if self.cc.ok():
             # Switch to balancing state
             logger.info(f"Bulk state: switching to balancing after {self.cc.value} seconds")
-            battery.chargerSM.setState(battery.chargerSM.stateBal)
+            battery.chargerSM.setState(1) # battery.chargerSM.stateBal)
 
     def bcv(self, battery):
         # bulk, dynamic charging voltage, depends on charging-current
@@ -78,18 +80,14 @@ class StateBulk(State):
                 )
         return bcv
 
-    def chargePower(self, battery):
-        # pnow = battery.current * voltageSum
-        # pnow = max(CUTOFFCURR, battery.current) * battery.voltage
-        pnow = max(20, battery.current) * battery.voltage
-        return int( math.ceil( pnow )/25 )*25
-        return pnow
-
-    def throttling(self):
-        return bla
+    def stateId(self):
+        return 0
 
     def reset(self):
         self.cc.reset()
+
+    def stateStr(self):
+        return f"Bulk-state, t-cutoff: {self.cc.stateStr()}"
 
 class StateBal(State):
 
@@ -115,9 +113,9 @@ class StateBal(State):
             self.baltime.add(battery.poll_interval/1000)
 
         if self.isBalanced():
-            # Switch to float state
-            logger.info(f"Balancing state: switching to float, balanced time: {self.baltime.value} seconds")
-            battery.chargerSM.setState(battery.chargerSM.stateFloat)
+            # Switch to float-sink state
+            logger.info(f"Balancing state: switching to float-sink, balanced time: {self.baltime.value} seconds")
+            battery.chargerSM.setState(2) # battery.chargerSM.stateSink)
         else:
             # if battery.get_min_cell_voltage() < 3.375:
             # charging current is in CUTOFFCURR window
@@ -128,17 +126,14 @@ class StateBal(State):
 
             if self.dsctime.ok():
                 # Switch to bulk state
-                logger.info(f"Float state: switching to bulk after {self.dsctime.value} seconds discharge")
-                battery.chargerSM.setState(battery.chargerSM.stateBulk)
+                logger.info(f"Balance state: switching to bulk after {self.dsctime.value} seconds discharge")
+                battery.chargerSM.setState(0) # battery.chargerSM.stateBulk)
 
     def bcv(self, battery):
         return 3.45
 
-    def chargePower(self, battery):
-        return 0
-
-    def throttling(self):
-        return True
+    def stateId(self):
+        return 1
 
     def reset(self):
         self.dsctime.reset()
@@ -146,11 +141,36 @@ class StateBal(State):
     def resetDayly(self):
         self.baltime.reset()
 
+    def stateStr(self):
+        return f"Balancing-state, t-balance: {self.baltime.stateStr()}, d-discharge: {self.dsctime.stateStr()}"
+
+class StateSink(State):
+
+    def __init__(self):
+        super(StateSink, self).__init__("stateSink")
+
+    def run(self, battery):
+
+        if battery.get_min_cell_voltage() <= 3.4:
+            logger.info(f"Float-Sink state: switching to float...")
+            battery.chargerSM.setState(3) # battery.chargerSM.stateFloat)
+
+    def bcv(self, battery):
+        return 3.4
+
+    def stateId(self):
+        return 2
+
+    def reset(self):
+        pass
+
+    def stateStr(self):
+        return f"Sink-state"
+
 class StateFloat(State):
 
     def __init__(self):
         super(StateFloat, self).__init__("stateFloat")
-        self._bcv = 3.45
         self.dsctime = ValueTimer("Discharging", THTime)
 
     def run(self, battery):
@@ -163,58 +183,57 @@ class StateFloat(State):
         if self.dsctime.ok():
             # Switch to bulk state
             logger.info(f"Float state: switching to bulk after {self.dsctime.value} seconds discharge")
-            battery.chargerSM.setState(battery.chargerSM.stateBulk)
-        else:
-            # gradual decrease charging voltage
-            if self._bcv >= 3.401:
-                self._bcv -= 0.001;
+            battery.chargerSM.setState(0) # battery.chargerSM.stateBulk)
 
     def bcv(self, battery):
-        # return 3.4
-        return self._bcv
+        return 3.4
 
-    def chargePower(self, battery):
-        return 0
-
-    def throttling(self):
-        return True
+    def stateId(self):
+        return 3
 
     def reset(self):
-        self._bcv = 3.45
         self.dsctime.reset()
+
+    def stateStr(self):
+        return f"Float-state, d-discharge: {self.dsctime.stateStr()}"
 
 class ChgStateMachine(object):
 
     def __init__(self, name):
         self.name = name
-        self.state = None
+        self.state = 0
 
-        self.stateBulk = StateBulk()
-        self.stateBal = StateBal()
-        self.stateFloat = StateFloat()
+        self.states = [
+            StateBulk(),
+            StateBal(),
+            StateSink(),
+            StateFloat(),
+        ]
 
     def run(self, battery):
-        if self.state != None:
-            self.state.run(battery)
-        else:
-            logger.info(self.name, "no state set!")
+        self.getState().run(battery)
 
     def bcv(self, battery):
-        if self.state != None:
-            return self.state.bcv(battery)
-        else:
-            logger.info(self.name, "no state set!")
+        return self.getState().bcv(battery)
 
     def setState(self, state):
 
-        if self.state == None:
-            logger.info(f"ChgStatemachine: initial state: {state.name}")
-        else:
-            logger.info(f"ChgStatemachine: {self.state.name} -> {state.name}")
+        s = self.states[state]
 
-        state.reset()
+        logger.info(f"ChgStatemachine: {self.getState().name} -> {s.name}")
+
+        s.reset()
         self.state = state
 
+    def getState(self, s=None):
+
+        if s!=None:
+            return self.states[s]
+
+        return self.states[self.state]
+
+    def stateStr(self):
+        return self.getState().stateStr()
 
 class Protection(object):
     # 2 = Alarm, 1 = Warning, 0 = Normal
@@ -284,11 +303,9 @@ class Battery(object):
         # XXX unterscheidung verschiedene balancer !!!!!!!!!!!!!
         self.balancing = False
         self.throttling = None
-        self.bulkpower = 0
-        self.prequest = 0
 
         self.chargerSM = ChgStateMachine("ChargerStateMachine")
-        self.chargerSM.setState(self.chargerSM.stateBulk)
+        self.chargerSM.setState(0) # self.chargerSM.stateBulk)
 
         self.dbgcount = 3570
 
@@ -376,11 +393,15 @@ class Battery(object):
 
             # Reset balancing state at midnight
             if time.localtime().tm_hour == 0:
-                self.chargerSM.stateBal.resetDayly()
+                self.chargerSM.getState(1).resetDayly()
 
-            self.balancing = self.chargerSM.state == self.chargerSM.stateBal or self.chargerSM.state == self.chargerSM.stateFloat
+            # self.balancing = self.chargerSM.state == self.chargerSM.stateBal or self.chargerSM.state == self.chargerSM.stateFloat
+            # self.balancing = self.chargerSM.state == 1 or self.chargerSM.state == 2 or self.chargerSM.state == 2
+            self.balancing = self.chargerSM.state >= 1
 
-            balanced = self.chargerSM.stateBal.isBalanced()
+            self.chgmode = self.chargerSM.state
+
+            balanced = self.chargerSM.getState(1).isBalanced()
 
             if self.control_voltage == None:
                 # Initial case
@@ -391,10 +412,6 @@ class Battery(object):
             # charging algo
             if maxCellVoltage < bcv:
                 chargevoltage = bcv * self.cell_count
-                if self.chargerSM.state == self.chargerSM.stateFloat:
-                    if (bcv - maxCellVoltage) > 0.005:
-                        self.throttling = False
-                else:
                 self.throttling = False
             else: # maxCellVoltage >= bcv
                 if aboveVolt > 0.025: # allow for 25mV hysteresis to avoid frequent voltage changes
@@ -402,15 +419,11 @@ class Battery(object):
                 self.throttling = True
 
             if (chargevoltage != self.control_voltage) or (self.dbgcount == 3600):
-                logger.info(f"{self.chargerSM.state.name}, {self.current:.1f}A, cellhigh: {maxCellVoltage:.3f}V, above: {aboveVolt:.3f}V, bcv: {bcv:.3f}V, cv: {chargevoltage:.3f}V, bal: {self.balancing}, balanced: {balanced}")
+                logger.info(f"{self.chargerSM.stateStr()}, {self.current:.1f}A, cellhigh: {maxCellVoltage:.3f}V, above: {aboveVolt:.3f}V, bcv: {bcv:.3f}V, cv: {chargevoltage:.3f}V, bal: {self.balancing}, balanced: {balanced}")
                 if self.dbgcount == 3600:
                     self.dbgcount = 0
 
             self.control_voltage = chargevoltage
-
-            # self.throttling = self.chargerSM.throttling()
-            self.bulkpower = self.chargerSM.state.chargePower(self)
-            self.prequest = self.chargerSM.state.chargePower(self)
 
             self.dbgcount += 1
             return
@@ -680,7 +693,7 @@ if __name__ == "__main__":
         # b.chargerSM.run(b)
         b.manage_charge_voltage()
 
-        bcv = b.chargerSM.state.bcv(b)
+        bcv = b.chargerSM.getState().bcv(b)
 
         balancing = b.chargerSM.state == b.chargerSM.stateBal or b.chargerSM.state == b.chargerSM.stateFloat
         print(f"    *** batt: cur: {b.current}, bcv: {bcv}, balancer on: {balancing}, i: {i} ***")
