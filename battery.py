@@ -199,6 +199,11 @@ class StateFloat(State):
 
 class ChgStateMachine(object):
 
+    STATEBULK  = 0
+    STATEBAL   = 1
+    STATESINK  = 2
+    STATEFLOAT = 3
+
     def __init__(self, name):
         self.name = name
         self.state = 0
@@ -396,8 +401,9 @@ class Battery(object):
                 self.chargerSM.getState(1).resetDayly()
 
             # self.balancing = self.chargerSM.state == self.chargerSM.stateBal or self.chargerSM.state == self.chargerSM.stateFloat
-            # self.balancing = self.chargerSM.state == 1 or self.chargerSM.state == 2 or self.chargerSM.state == 2
-            self.balancing = self.chargerSM.state >= 1
+            # self.balancing = self.chargerSM.state == 1 or self.chargerSM.state == 2 or self.chargerSM.state == 3
+            # self.balancing = self.chargerSM.state >= 1
+            self.balancing = self.chargerSM.state == ChgStateMachine.STATEBAL
 
             self.chgmode = self.chargerSM.state
 
@@ -668,7 +674,7 @@ if __name__ == "__main__":
     i = 0
     while True:
 
-        if b.chargerSM.state == b.chargerSM.stateBulk:
+        if b.chargerSM.state == b.chargerSM.STATEBULK:
             b.cell_min_voltage = 3.450
             b.cell_max_voltage = b.cell_min_voltage + random.randrange(3, 7)/1000 
             # print(f"batt: cell_min_voltage: {b.cell_min_voltage}")
@@ -678,13 +684,13 @@ if __name__ == "__main__":
 
         # print(f"batt: cur: {b.current}")
 
-        if b.chargerSM.state == b.chargerSM.stateBal:
+        if b.chargerSM.state == b.chargerSM.STATEBAL:
             b.cell_min_voltage = 3.399
             b.cell_max_voltage = b.cell_min_voltage + random.randrange(3, 7)/1000 
             # print(f"batt: cell_min_voltage: {b.cell_min_voltage}")
             # print(f"batt: cell_max_voltage: {b.cell_max_voltage}")
 
-        if b.chargerSM.state == b.chargerSM.stateFloat:
+        if b.chargerSM.state == b.chargerSM.STATEFLOAT:
             b.cell_min_voltage -= 0.025
             b.cell_max_voltage -= 0.025
             # print(f"batt: cell_min_voltage: {b.cell_min_voltage}")
@@ -695,11 +701,11 @@ if __name__ == "__main__":
 
         bcv = b.chargerSM.getState().bcv(b)
 
-        balancing = b.chargerSM.state == b.chargerSM.stateBal or b.chargerSM.state == b.chargerSM.stateFloat
-        print(f"    *** batt: cur: {b.current}, bcv: {bcv}, balancer on: {balancing}, i: {i} ***")
+        # balancing = b.chargerSM.state == b.chargerSM.STATEBAL or b.chargerSM.state == b.chargerSM.STATEFLOAT
+        print(f"    *** batt: cur: {b.current}, bcv: {bcv}, balancer on: {b.balancing}, i: {i} ***")
 
         if i == 45:
-            b.chargerSM.stateBal.resetDayly()
+            b.chargerSM.getState(ChgStateMachine.STATEBAL).resetDayly()
 
         time.sleep(0.5)
         i += 1
