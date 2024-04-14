@@ -87,7 +87,7 @@ class StateBulk(State):
         self.cc.reset()
 
     def stateStr(self):
-        return f"Bulk-state, t-cutoff: {self.cc.stateStr()}"
+        return f"Bulk-state, t-cutoff: {self.cc.stateStr()}s"
 
 class StateBal(State):
 
@@ -142,7 +142,7 @@ class StateBal(State):
         self.baltime.reset()
 
     def stateStr(self):
-        return f"Balancing-state, t-balance: {self.baltime.stateStr()}, d-discharge: {self.dsctime.stateStr()}"
+        return f"Balancing-state, t-balance: {self.baltime.stateStr()}s, t-discharge: {self.dsctime.stateStr()}s"
 
 class StateSink(State):
 
@@ -195,7 +195,7 @@ class StateFloat(State):
         self.dsctime.reset()
 
     def stateStr(self):
-        return f"Float-state, d-discharge: {self.dsctime.stateStr()}"
+        return f"Float-state, t-discharge: {self.dsctime.stateStr()}s"
 
 class ChgStateMachine(object):
 
