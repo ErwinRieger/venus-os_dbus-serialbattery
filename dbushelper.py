@@ -225,7 +225,8 @@ class DbusHelper:
         self._dbusservice['/History/TotalAhDrawn'] = self.battery.total_ah_drawn
         self._dbusservice['/Io/AllowToCharge'] = 1 if self.battery.charge_fet \
                                 and self.battery.control_allow_charge else 0
-        self._dbusservice['/Io/AllowToDischarge'] = 1 if self.battery.discharge_fet else 0
+        self._dbusservice['/Io/AllowToDischarge'] = 1 if self.battery.discharge_fet \
+                                and self.battery.control_allow_discharge else 0
         self._dbusservice['/System/NrOfModulesBlockingCharge'] = 0 if self.battery.charge_fet is None or \
                                 (self.battery.charge_fet and self.battery.control_allow_charge) else 1
         self._dbusservice['/System/NrOfModulesBlockingDischarge'] = 0 if self.battery.discharge_fet is None \

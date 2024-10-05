@@ -298,6 +298,7 @@ class Battery(object):
         self.control_discharge_current = None # xxx remove me: not set in daly.py:get_settings()
         self.control_charge_current = None
         self.control_allow_charge = None
+        self.control_allow_discharge = None
         # max battery charge/discharge current
         self.max_battery_current = None
         self.max_battery_discharge_current = C50 # initial value
@@ -370,6 +371,7 @@ class Battery(object):
                 if self.control_discharge_current or (self.control_discharge_current == None):
                     logger.info(f"turn off inverter, cell-low {minCellVoltage:.3f}V < minCellAdjusted: {minCellAdjusted:.3f}V")
                 self.control_discharge_current = 0.0 # turn off inverter
+                self.control_allow_discharge = False
 
             # re-connect to battery if all cells are above min voltage
             # Or
@@ -381,6 +383,7 @@ class Battery(object):
                 if self.control_discharge_current != self.max_battery_discharge_current:
                     logger.info(f"turn on inverter, cell-low {minCellVoltage:.3f}V > RECONNECTCELLVOLTAGE: {RECONNECTCELLVOLTAGE:.3f}V (or service re-start)")
                 self.control_discharge_current = self.max_battery_discharge_current # turn on inverter
+                self.control_allow_discharge = True
             # else:
                 # logger.info(f"keep inverter, minCellAdjusted: {minCellAdjusted:.3f}V < cell-low {minCellVoltage:.3f}V < RECONNECTCELLVOLTAGE: {RECONNECTCELLVOLTAGE:.3f}V")
 
