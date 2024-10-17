@@ -223,14 +223,16 @@ class DbusHelper:
         # Update battery extras
         self._dbusservice['/History/ChargeCycles'] = self.battery.cycles
         self._dbusservice['/History/TotalAhDrawn'] = self.battery.total_ah_drawn
-        self._dbusservice['/Io/AllowToCharge'] = 1 if self.battery.charge_fet \
-                                and self.battery.control_allow_charge else 0
-        self._dbusservice['/Io/AllowToDischarge'] = 1 if self.battery.discharge_fet \
-                                and self.battery.control_allow_discharge else 0
-        self._dbusservice['/System/NrOfModulesBlockingCharge'] = 0 if self.battery.charge_fet is None or \
-                                (self.battery.charge_fet and self.battery.control_allow_charge) else 1
-        self._dbusservice['/System/NrOfModulesBlockingDischarge'] = 0 if self.battery.discharge_fet is None \
-                                or self.battery.discharge_fet else 1
+
+        allow_charge =    self.battery.charge_fet and self.battery.control_allow_charge
+        allow_discharge = self.battery.discharge_fet and self.battery.control_allow_discharge
+
+        self._dbusservice['/Io/AllowToCharge'] = 1 if allow_charge else 0
+        self._dbusservice['/Io/AllowToDischarge'] = 1 if allow_discharge else 0
+
+        self._dbusservice['/System/NrOfModulesBlockingCharge'] = 0 if allow_charge else 1
+        self._dbusservice['/System/NrOfModulesBlockingDischarge'] = 0 if allow_discharge else 1
+
         self._dbusservice['/System/NrOfModulesOnline'] = 1 if self.battery.online else 0
         self._dbusservice['/System/NrOfModulesOffline'] = 0 if self.battery.online else 1
         self._dbusservice['/System/MinCellTemperature'] = self.battery.get_min_temp()
