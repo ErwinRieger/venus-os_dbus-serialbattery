@@ -123,6 +123,7 @@ class DbusHelper:
         self._dbusservice.add_path('/Io/AllowToCharge', 0, writeable=True)
         self._dbusservice.add_path('/Io/AllowToDischarge', 0, writeable=True)
         # self._dbusservice.add_path('/SystemSwitch',1,writeable=True)
+        self._dbusservice.add_path('/TimeToGo', 600 if self.battery.max_battery_discharge_current else 0, writeable=True)
 
         # Create the alarms
         self._dbusservice.add_path('/Alarms/LowVoltage', None, writeable=True)
@@ -229,6 +230,7 @@ class DbusHelper:
 
         self._dbusservice['/Io/AllowToCharge'] = 1 if allow_charge else 0
         self._dbusservice['/Io/AllowToDischarge'] = 1 if allow_discharge else 0
+        self._dbusservice['/TimeToGo'] = 600 if self.battery.max_battery_discharge_current else 0
 
         self._dbusservice['/System/NrOfModulesBlockingCharge'] = 0 if allow_charge else 1
         self._dbusservice['/System/NrOfModulesBlockingDischarge'] = 0 if allow_discharge else 1
