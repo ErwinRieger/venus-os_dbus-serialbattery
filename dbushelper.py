@@ -120,6 +120,9 @@ class DbusHelper:
         self._dbusservice.add_path('/Ess/Balancing', None, writeable=True)
         self._dbusservice.add_path('/Ess/Throttling', None, writeable=True)
         self._dbusservice.add_path('/Ess/Chgmode', None, writeable=True)
+        self._dbusservice.add_path('/Ess/ForceDischarge', 0, writeable=True,
+                                   onchangecallback=self.forceDischargeChanged)
+
         self._dbusservice.add_path('/Io/AllowToCharge', 0, writeable=True)
         self._dbusservice.add_path('/Io/AllowToDischarge', 0, writeable=True)
         # self._dbusservice.add_path('/SystemSwitch',1,writeable=True)
@@ -154,6 +157,16 @@ class DbusHelper:
         # Create TimeToSoC items
         for num in TIME_TO_SOC_POINTS:
             self._dbusservice.add_path('/TimeToSoC/' + str(num), None, writeable=Truesh_batteryg)
+
+        return True
+
+    def forceDischargeChanged(self, path, force):
+
+        if force and not self.battery.forceDischarge:
+            self.battery.forceDischarge = True
+
+        if not force and self.battery.forceDischarge:
+            self.battery.forceDischarge = False
 
         return True
 
@@ -256,6 +269,7 @@ class DbusHelper:
         self._dbusservice['/Ess/Balancing'] = self.battery.get_balancing()
         self._dbusservice['/Ess/Throttling'] = self.battery.throttling
         self._dbusservice['/Ess/Chgmode'] = self.battery.chgmode
+        self._dbusservice['/Ess/ForceDischarge'] = self.battery.forceDischarge
 
         # Update the alarms
         self._dbusservice['/Alarms/LowVoltage'] = self.battery.protection.voltage_low

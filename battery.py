@@ -315,6 +315,8 @@ class Battery(object):
 
         self.dbgcount = 3570
 
+        self.forceDischarge = False
+
     def test_connection(self):
         # Each driver must override this function to test if a connection can be made
         # return false when fail, true if successful
@@ -372,6 +374,7 @@ class Battery(object):
                     logger.info(f"turn off inverter, cell-low {minCellVoltage:.3f}V < minCellAdjusted: {minCellAdjusted:.3f}V")
                 self.control_discharge_current = 0.0 # turn off inverter
                 self.control_allow_discharge = False
+                self.forceDischarge = False
 
             # re-connect to battery if all cells are above min voltage
             # Or
@@ -386,6 +389,12 @@ class Battery(object):
                 self.control_allow_discharge = True
             # else:
                 # logger.info(f"keep inverter, minCellAdjusted: {minCellAdjusted:.3f}V < cell-low {minCellVoltage:.3f}V < RECONNECTCELLVOLTAGE: {RECONNECTCELLVOLTAGE:.3f}V")
+
+            elif (minCellVoltage > MIN_CELL_VOLTAGE) and self.forceDischarge:
+                if self.control_discharge_current != self.max_battery_discharge_current:
+                    logger.info(f"forcing discharge/inverter on, cell-low: {minCellVoltage:.3f}V")
+                self.control_discharge_current = self.max_battery_discharge_current # turn on inverter
+                self.control_allow_discharge = True
 
             ###################################################
             self.chargerSM.run(self)
