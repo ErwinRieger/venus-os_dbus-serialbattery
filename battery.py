@@ -12,7 +12,6 @@ from datetime import timedelta
 # * 0.05C cut off current
 #
 THTime = 60 # [s]
-BalanceTime = 30 * 60 # [s]
 
 from utils import *
 
@@ -93,7 +92,7 @@ class StateBal(State):
 
     def __init__(self):
         super(StateBal, self).__init__("stateBalancing")
-        self.baltime = ValueTimer("BalanceTime", BalanceTime)
+        self.baltime = ValueTimer("BalanceTime", BALANCETIME)
         self.dsctime = ValueTimer("Discharging", THTime)
 
     def isBalanced(self):
