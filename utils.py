@@ -21,10 +21,8 @@ MAX_VOLTAGE_TIME_SEC = 15*60
 SOC_LEVEL_TO_RESET_VOLTAGE_LIMIT = 90
 
 # battery Current limits
-# MAX_BATTERY_CURRENT = 50.0
-MAX_BATTERY_CURRENT = 250.0 # manne: 100
-# MAX_BATTERY_DISCHARGE_CURRENT = 60.0
-MAX_BATTERY_DISCHARGE_CURRENT = 250.0 # manne: 100
+MAX_BATTERY_CURRENT = 50.0
+MAX_BATTERY_DISCHARGE_CURRENT = 60.0
 
 # Some daly bms have a very unsteady current measurement, enable
 # this to average the current values from bms.
