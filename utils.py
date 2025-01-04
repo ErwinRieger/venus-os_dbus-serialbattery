@@ -40,7 +40,8 @@ MIN_CELL_VOLTAGE = 3.0
 # pv charger control
 MAX_CELL_VOLTAGE = 3.45                       # CVCM_ENABLE max charging voltage
 # Charging cellvoltage when to reconnect inverter (load)
-RECONNECTCELLVOLTAGE = 3.275 # 52.4v, about 50% SOC, note: inverter will reconnect at 52v
+RECONNECTCELLVOLTAGE = 3.3 # 52.8v
+BALANCETIME = 120 # [s]
 
 # Simulate Midpoint graph (True/False). 
 MIDPOINT_ENABLE = False
