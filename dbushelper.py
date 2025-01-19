@@ -18,7 +18,7 @@ class DbusHelper:
 
     def __init__(self, battery):
         self.battery = battery
-        self.instance = 1
+        self.instance = 1 + int(self.battery.port[-1])
         self.settings = None
         self._dbusservice = VeDbusService("com.victronenergy.battery." +
                                           self.battery.port[self.battery.port.rfind('/') + 1:],
@@ -42,7 +42,6 @@ class DbusHelper:
 
     def handle_changed_setting(self, setting, oldvalue, newvalue):
         if setting == 'instance':
-            self.battery.role, self.instance = self.get_role_instance()
             logger.info("Changed DeviceInstance = %d", self.instance)
             return
 
@@ -78,7 +77,7 @@ class DbusHelper:
                                    gettextcallback=lambda p, v: "{:0.2f}V".format(v))
         self._dbusservice.add_path('/Info/MaxChargeCurrent', self.battery.max_battery_current, writeable=True,
                                    gettextcallback=lambda p, v: "{:0.2f}A".format(v))
-        self._dbusservice.add_path('/Info/MaxDischargeCurrent', self.battery.control_discharge_current, # self.battery.max_battery_discharge_current,
+        self._dbusservice.add_path('/Info/MaxDischargeCurrent', self.battery.control_discharge_current,
                                    writeable=True, gettextcallback=lambda p, v: "{:0.2f}A".format(v))
         self._dbusservice.add_path('/System/NrOfCellsPerBattery', self.battery.cell_count, writeable=True)
         self._dbusservice.add_path('/System/NrOfModulesOnline', 1, writeable=True)
@@ -120,13 +119,13 @@ class DbusHelper:
         self._dbusservice.add_path('/Ess/Balancing', None, writeable=True)
         self._dbusservice.add_path('/Ess/Throttling', None, writeable=True)
         self._dbusservice.add_path('/Ess/Chgmode', None, writeable=True)
-        self._dbusservice.add_path('/Ess/ForceDischarge', 0, writeable=True,
-                                   onchangecallback=self.forceDischargeChanged)
+        self._dbusservice.add_path('/Ess/ForceMode', 0, writeable=True,
+                                   onchangecallback=self.forceMode)
 
         self._dbusservice.add_path('/Io/AllowToCharge', 0, writeable=True)
         self._dbusservice.add_path('/Io/AllowToDischarge', 0, writeable=True)
         # self._dbusservice.add_path('/SystemSwitch',1,writeable=True)
-        self._dbusservice.add_path('/TimeToGo', None, writeable=True)
+        self._dbusservice.add_path('/TimeToGo', self.battery.timeToGo, writeable=True)
 
         # Create the alarms
         self._dbusservice.add_path('/Alarms/LowVoltage', None, writeable=True)
@@ -243,7 +242,7 @@ class DbusHelper:
 
         self._dbusservice['/Io/AllowToCharge'] = 1 if allow_charge else 0
         self._dbusservice['/Io/AllowToDischarge'] = 1 if allow_discharge else 0
-        self._dbusservice['/TimeToGo'] = 600 if self.battery.control_discharge_current else 0
+        self._dbusservice['/TimeToGo'] = self.battery.timeToGo
 
         self._dbusservice['/System/NrOfModulesBlockingCharge'] = 0 if allow_charge else 1
         self._dbusservice['/System/NrOfModulesBlockingDischarge'] = 0 if allow_discharge else 1
@@ -269,7 +268,7 @@ class DbusHelper:
         self._dbusservice['/Ess/Balancing'] = self.battery.get_balancing()
         self._dbusservice['/Ess/Throttling'] = self.battery.throttling
         self._dbusservice['/Ess/Chgmode'] = self.battery.chgmode
-        self._dbusservice['/Ess/ForceDischarge'] = self.battery.forceDischarge
+        self._dbusservice['/Ess/ForceMode'] = self.battery.forceMode
 
         # Update the alarms
         self._dbusservice['/Alarms/LowVoltage'] = self.battery.protection.voltage_low
