@@ -120,7 +120,7 @@ class DbusHelper:
         self._dbusservice.add_path('/Ess/Throttling', None, writeable=True)
         self._dbusservice.add_path('/Ess/Chgmode', None, writeable=True)
         self._dbusservice.add_path('/Ess/ForceMode', 0, writeable=True,
-                                   onchangecallback=self.forceMode)
+                                   onchangecallback=self.forceDischargeChanged)
 
         self._dbusservice.add_path('/Io/AllowToCharge', 0, writeable=True)
         self._dbusservice.add_path('/Io/AllowToDischarge', 0, writeable=True)
