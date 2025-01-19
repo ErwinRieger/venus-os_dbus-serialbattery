@@ -160,14 +160,7 @@ class DbusHelper:
         return True
 
     def forceDischargeChanged(self, path, force):
-
-        if force and not self.battery.forceDischarge:
-            self.battery.forceDischarge = True
-
-        if not force and self.battery.forceDischarge:
-            self.battery.forceDischarge = False
-
-        return True
+        self.battery.forceMode = force
 
     def publish_battery(self, loop):
         # This is called every battery.poll_interval milli second as set up per battery type to read and update the data

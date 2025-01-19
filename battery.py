@@ -304,7 +304,7 @@ class Battery(object):
         self.cells = []
         self.control_voltage = None
         self.control_discharge_current = None # xxx remove me: not set in daly.py:get_settings()
-        self.timeToGo = None
+        self.timeToGo = 0
         self.control_charge_current = None
         self.control_allow_charge = None
         self.control_allow_discharge = None
