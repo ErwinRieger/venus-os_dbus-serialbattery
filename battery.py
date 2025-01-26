@@ -137,7 +137,7 @@ class StateBal(State):
             # if battery.get_min_cell_voltage() < 3.375:
             # charging current is in CUTOFFCURR window
             # if abs(battery.current) > CUTOFFCURR or battery.get_max_cell_voltage() < cellu0:
-            if abs(battery.current) > CUTOFFCURR or battery.get_max_cell_voltage() < cellpull:
+            if abs(battery.current) > CUTOFFCURR or battery.get_max_cell_voltage() < (cellpull - 0.005):
                 self.dsctime.add(battery.poll_interval/1000)
             else:
                 self.dsctime.reset()
@@ -193,7 +193,7 @@ class StateFloat(State):
 
     def run(self, battery):
 
-        if battery.get_max_cell_voltage() < cellfloat:
+        if battery.get_max_cell_voltage() < (cellfloat - 0.005):
             self.dsctime.add(battery.poll_interval/1000)
         else:
             self.dsctime.reset()
