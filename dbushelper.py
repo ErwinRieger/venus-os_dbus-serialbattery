@@ -212,9 +212,9 @@ class DbusHelper:
         # Update SOC, DC and System items
         self._dbusservice['/System/NrOfCellsPerBattery'] = self.battery.cell_count
         self._dbusservice['/Soc'] = round(self.battery.soc, 2)
-        self._dbusservice['/Dc/0/Voltage'] = round(self.battery.voltage, 2)
-        self._dbusservice['/Dc/0/Current'] = round(self.battery.current, 2)
-        self._dbusservice['/Dc/0/Power'] = round(self.battery.voltage * self.battery.current, 2)
+        self._dbusservice['/Dc/0/Voltage'] = self.battery.voltage
+        self._dbusservice['/Dc/0/Current'] = self.battery.current
+        self._dbusservice['/Dc/0/Power'] = self.battery.voltage * self.battery.current
         self._dbusservice['/Dc/0/Temperature'] = self.battery.get_temp()
         self._dbusservice['/Capacity'] = self.battery.get_capacity_remain()
         self._dbusservice['/ConsumedAmphours'] = 0 if self.battery.capacity is None or \
