@@ -48,17 +48,18 @@ class State(object):
         self.name = name
 
 # Error cell-voltage from bms
-measureoffs = 0.005
+# measureoffs = 0.005
 # u0 = 3.375 # i=0
-cellu0 = 3.37 + measureoffs
+cellu0 = 3.375 # + measureoffs
 umax = 3.60 # 3.65, i=0.5C
 
-cellpull = cellu0 + 0.005
-cellfloat = cellu0 - 0.005
+cellpull = cellu0 + 0.010
+cellfloat = cellu0 - 0.010
 
 vrange = umax - cellpull
 
 MAX_CHARGING_CELL_VOLTAGE = 3.55
+MAX_CHARGING_VOLTAGE = 3.55*16 # XXX hardcoded number of cells
 
 STATEBULK  = 0
 STATEBAL   = 1
@@ -86,11 +87,14 @@ class StateBulk(State):
 
     def bcv(self, battery):
         # bulk, dynamic charging voltage, depends on charging-current
-        # bcv = max(3.45, 3.40 + (3.6-3.40) * round( battery.current / C50 , 2))
-        bcv = max(
+        # bcv = max(3.45, 3.40 + (3.6-3.40) * battery.current / C50)
+        if self.cc.value == 0:
+            bcv = max(
                 cellpull,
-                min( cellpull + vrange * round( battery.current / C50 , 2), MAX_CHARGING_CELL_VOLTAGE )
+                min( cellpull + vrange * battery.current / C50, MAX_CHARGING_CELL_VOLTAGE )
                 )
+        else:
+            bcv = cellpull
         return bcv
 
     def stateId(self):
@@ -107,7 +111,7 @@ class StateBal(State):
     def __init__(self):
         super(StateBal, self).__init__("stateBalancing")
         self.baltime = ValueTimer("BalanceTime", BALANCETIME)
-        self.dsctime = ValueTimer("Discharging", THTime)
+        self.dsctime = ValueTimer("Discharging", 2*THTime)
 
     def isBalanced(self):
         # xxx debug remove
@@ -132,6 +136,7 @@ class StateBal(State):
         else:
             # if battery.get_min_cell_voltage() < 3.375:
             # charging current is in CUTOFFCURR window
+            # if abs(battery.current) > CUTOFFCURR or battery.get_max_cell_voltage() < cellu0:
             if abs(battery.current) > CUTOFFCURR or battery.get_max_cell_voltage() < cellpull:
                 self.dsctime.add(battery.poll_interval/1000)
             else:
@@ -184,7 +189,7 @@ class StateFloat(State):
 
     def __init__(self):
         super(StateFloat, self).__init__("stateFloat")
-        self.dsctime = ValueTimer("Discharging", THTime)
+        self.dsctime = ValueTimer("Discharging", 2*THTime)
 
     def run(self, battery):
 
@@ -432,17 +437,27 @@ class Battery(object):
             else:
                 chargevoltage = self.control_voltage
 
+            maxcv = voltageSum
+            for charger in self.chargers:
+                vc = self.dbusmon.get_value(charger, "/Dc/0/Voltage")
+                maxcv = max(maxcv, vc)
+            diffvolt = min(maxcv - voltageSum, 1)
+            logger.info(f"charger {maxcv:.3f}V diffvolt: {diffvolt:.3f}V")
+
             # charging algo
             if maxCellVoltage < bcv:
-                chargevoltage = bcv * self.cell_count
+                chargevoltage = bcv * self.cell_count + diffvolt
                 self.throttling = False
             elif self.chargerSM.state == STATEFLOAT:
-                chargevoltage = bcv * self.cell_count
+                chargevoltage = bcv * self.cell_count + diffvolt
                 self.throttling = True
             else: # maxCellVoltage >= bcv
-                if aboveVolt > 0.025: # allow for 25mV hysteresis to avoid frequent voltage changes
-                    chargevoltage = min(voltageSum - aboveVolt, self.cell_count * bcv)
+                # if aboveVolt > 0.025: # allow for 25mV hysteresis to avoid frequent voltage changes
+                    # chargevoltage = min(voltageSum - aboveVolt, self.cell_count * bcv) + diffvolt
+                chargevoltage = bcv * self.cell_count - aboveVolt + diffvolt
                 self.throttling = True
+
+            chargevoltage = min(chargevoltage, MAX_CHARGING_VOLTAGE)
 
             if (chargevoltage != self.control_voltage) or (self.dbgcount == 3600):
                 logger.info(f"{self.chargerSM.stateStr()}, {self.current:.1f}A, cellhigh: {maxCellVoltage:.3f}V, above: {aboveVolt:.3f}V, bcv: {bcv:.3f}V, cv: {chargevoltage:.3f}V, bal: {self.balancing}, balanced: {balanced}")
