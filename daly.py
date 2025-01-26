@@ -3,7 +3,7 @@ from battery import Battery, Cell
 from utils import *
 from struct import *
 
-# from dbusmonitor import DbusMonitor
+from dbusmonitor import DbusMonitor
 
 import math
 
@@ -86,6 +86,22 @@ class Daly(Battery):
             logger.info(f"current discharge current setting: {i}")
             self.control_discharge_current = i
         """
+
+        dummy = {'code': None, 'whenToLog': 'configChange', 'accessLevel': None}
+        dbus_tree = {
+                        'com.victronenergy.inverter': {
+                            "/Dc/0/Voltage": dummy,
+                        },
+                        'com.victronenergy.solarcharger': {
+                            "/Dc/0/Voltage": dummy,
+                        },
+                    }
+        self.dbusmon = DbusMonitor(dbus_tree)
+
+        self.chargers = self.dbusmon.get_service_list(classfilter="com.victronenergy.solarcharger") or {}
+        for inverter in self.dbusmon.get_service_list(classfilter="com.victronenergy.inverter") or {}:
+            self.chargers[inverter] = 1
+        logger.info(f"chargers: {self.chargers}")
 
         return True
 
