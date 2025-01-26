@@ -425,7 +425,7 @@ class Battery(object):
             if time.localtime().tm_hour == 0:
                 self.chargerSM.getState(STATEBAL).resetDayly()
 
-            self.balancing = self.chargerSM.state == ChgStateMachine.STATEBAL
+            self.balancing = self.chargerSM.state == STATEBAL
 
             self.chgmode = self.chargerSM.state
 
@@ -739,7 +739,7 @@ if __name__ == "__main__":
         print(f"    *** batt: cur: {b.current}, bcv: {bcv}, balancer on: {b.balancing}, i: {i} ***")
 
         if i == 45:
-            b.chargerSM.getState(ChgStateMachine.STATEBAL).resetDayly()
+            b.chargerSM.getState(STATEBAL).resetDayly()
 
         time.sleep(0.5)
         i += 1
