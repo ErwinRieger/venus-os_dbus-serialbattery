@@ -442,7 +442,7 @@ class Battery(object):
                 vc = self.dbusmon.get_value(charger, "/Dc/0/Voltage")
                 maxcv = max(maxcv, vc)
             diffvolt = min(maxcv - voltageSum, 1)
-            logger.info(f"charger {maxcv:.3f}V diffvolt: {diffvolt:.3f}V")
+            # logger.info(f"charger {maxcv:.3f}V diffvolt: {diffvolt:.3f}V")
 
             # charging algo
             if maxCellVoltage < bcv:
