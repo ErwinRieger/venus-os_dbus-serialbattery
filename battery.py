@@ -1,8 +1,253 @@
 # -*- coding: utf-8 -*-
 
-from utils import *
-import math
+import math, time, random
 from datetime import timedelta
+
+# import libup
+
+#
+# eve standard charge:
+# * 0.5C charging current
+# * 3.65V charging voltage
+# * 0.05C cut off current
+#
+THTime = 60 # [s]
+
+from utils import *
+
+C50 = BATTERY_CAPACITY / 2
+CUTOFFCURR = BATTERY_CAPACITY*0.05 # [A]
+
+logger.info(f"CUTOFFCURR: {CUTOFFCURR}")
+
+class ValueTimer(object):
+    def __init__(self, name, th_secs):
+        self.name = name
+        self.th = th_secs
+        self._ok = False
+        self.reset()
+    def add(self, v):
+        if not self.value:
+            logger.info(f"state {self.name}: begin counting")
+        self.value += v
+        if not self._ok and self.value > self.th:
+            logger.info(f"state of value {self.name} changed to True ({self.value}s)")
+            self._ok = True
+    def ok(self):
+        return self._ok
+    def reset(self):
+        if self._ok:
+            logger.info(f"state of value {self.name} changed to False ({self.value}s)")
+            self._ok = False
+        self.value = 0
+    def stateStr(self):
+        return f"{self.value}/{self.th}"
+
+class State(object):
+    def __init__(self, name):
+        self.name = name
+
+# Error cell-voltage from bms
+# measureoffs = 0.005
+# u0 = 3.375 # i=0
+cellu0 = 3.375 # + measureoffs
+umax = 3.5
+
+cellpull = cellu0 + 0.010
+cellfloat = cellu0 - 0.010
+
+vrange = umax - cellpull
+
+MAX_CHARGING_CELL_VOLTAGE = 3.55
+MAX_CHARGING_VOLTAGE = umax*16 # XXX hardcoded number of cells
+
+STATEBULK  = 0
+STATEBAL   = 1
+STATESINK  = 2
+STATEFLOAT = 3
+
+class StateBulk(State):
+
+    def __init__(self):
+        super(StateBulk, self).__init__("bulkCharging")
+        self.cc = ValueTimer(f"T-Cutoff", THTime)
+
+    def run(self, battery):
+        # change state if:
+        # * charging current is in CUTOFFCURR window
+        if abs(battery.current) <= CUTOFFCURR and battery.get_max_cell_voltage() >= cellpull:
+            self.cc.add(battery.poll_interval/1000)
+        else:
+            self.cc.reset()
+
+        if self.cc.ok():
+            # Switch to balancing state
+            logger.info(f"Bulk state: switching to balancing after {self.cc.value} seconds")
+            battery.chargerSM.setState(STATEBAL)
+
+    def bcv(self, battery):
+        # bulk, dynamic charging voltage, depends on charging-current
+        bcv = max(
+            cellpull,
+            min( cellpull + vrange * battery.current / C50, MAX_CHARGING_CELL_VOLTAGE )
+            )
+        return bcv
+
+    def stateId(self):
+        return STATEBULK
+
+    def reset(self):
+        self.cc.reset()
+
+    def stateStr(self):
+        return f"Bulk-state, t-cutoff: {self.cc.stateStr()}s"
+
+class StateBal(State):
+
+    def __init__(self):
+        super(StateBal, self).__init__("stateBalancing")
+        self.baltime = ValueTimer("BalanceTime", BALANCETIME)
+        self.dsctime = ValueTimer("Discharging", 2*THTime)
+
+    def isBalanced(self):
+        # xxx debug remove
+        # return True
+        return self.baltime.ok()
+
+    def run(self, battery):
+        # change state if:
+        # * cell-diff is below threshold for BalanceTime seconds
+        minCellVoltage = battery.get_min_cell_voltage()
+        maxCellVoltage = battery.get_max_cell_voltage()
+        cellDiff = maxCellVoltage - minCellVoltage
+
+        if cellDiff < 0.005:
+            # logger.info("celldiff:", cellDiff)
+            self.baltime.add(battery.poll_interval/1000)
+
+        if self.isBalanced():
+            # Switch to float-sink state
+            logger.info(f"Balancing state: switching to float-sink, balanced time: {self.baltime.value} seconds")
+            battery.chargerSM.setState(STATESINK)
+        else:
+            # if battery.get_min_cell_voltage() < 3.375:
+            # charging current is in CUTOFFCURR window
+            # if abs(battery.current) > CUTOFFCURR or battery.get_max_cell_voltage() < cellu0:
+            if abs(battery.current) > CUTOFFCURR or battery.get_max_cell_voltage() < (cellpull - 0.005):
+                self.dsctime.add(battery.poll_interval/1000)
+            else:
+                self.dsctime.reset()
+
+            if self.dsctime.ok():
+                # Switch to bulk state
+                logger.info(f"Balance state: switching to bulk after {self.dsctime.value} seconds discharge")
+                battery.chargerSM.setState(STATEBULK)
+
+    def bcv(self, battery):
+        return cellpull
+
+    def stateId(self):
+        return STATEBAL
+
+    def reset(self):
+        self.dsctime.reset()
+
+    def resetDayly(self):
+        self.baltime.reset()
+
+    def stateStr(self):
+        return f"Balancing-state, t-balance: {self.baltime.stateStr()}s, t-discharge: {self.dsctime.stateStr()}s"
+
+class StateSink(State):
+
+    def __init__(self):
+        super(StateSink, self).__init__("stateSink")
+
+    def run(self, battery):
+
+        if battery.get_min_cell_voltage() <= cellfloat:
+            logger.info(f"Float-Sink state: switching to float, cellfloat: {cellfloat} ...")
+            battery.chargerSM.setState(STATEFLOAT)
+
+    def bcv(self, battery):
+        return cellfloat
+
+    def stateId(self):
+        return STATESINK
+
+    def reset(self):
+        pass
+
+    def stateStr(self):
+        return f"Sink-state"
+
+class StateFloat(State):
+
+    def __init__(self):
+        super(StateFloat, self).__init__("stateFloat")
+        self.dsctime = ValueTimer("Discharging", 2*THTime)
+
+    def run(self, battery):
+
+        if battery.get_max_cell_voltage() < (cellfloat - 0.005):
+            self.dsctime.add(battery.poll_interval/1000)
+        else:
+            self.dsctime.reset()
+
+        if self.dsctime.ok():
+            # Switch to bulk state
+            logger.info(f"Float state: switching to bulk after {self.dsctime.value} seconds discharge")
+            battery.chargerSM.setState(STATEBULK)
+
+    def bcv(self, battery):
+        return cellfloat
+
+    def stateId(self):
+        return STATEFLOAT
+
+    def reset(self):
+        self.dsctime.reset()
+
+    def stateStr(self):
+        return f"Float-state, t-discharge: {self.dsctime.stateStr()}s"
+
+class ChgStateMachine(object):
+
+    def __init__(self, name):
+        self.name = name
+        self.state = STATEBULK
+
+        self.states = [
+            StateBulk(),
+            StateBal(),
+            StateSink(),
+            StateFloat(),
+        ]
+
+    def run(self, battery):
+        self.getState().run(battery)
+
+    def bcv(self, battery):
+        return self.getState().bcv(battery)
+
+    def setState(self, state):
+
+        s = self.states[state]
+
+        logger.info(f"ChgStatemachine: {self.getState().name} -> {s.name}")
+
+        s.reset()
+        self.state = state
+
+    def getState(self, s=None):
+
+        if s!=None:
+            return self.states[s]
+
+        return self.states[self.state]
+
+    def stateStr(self):
+        return self.getState().stateStr()
 
 class Protection(object):
     # 2 = Alarm, 1 = Warning, 0 = Normal
@@ -36,7 +281,7 @@ class Battery(object):
         self.baud_rate = baud
         self.role = 'battery'
         self.type = 'Generic'
-        self.poll_interval = 1000
+        self.poll_interval = 1000 # mS
         self.online = True
 
         self.hardware_version = None
@@ -60,13 +305,26 @@ class Battery(object):
         self.cells = []
         self.control_voltage = None
         self.control_discharge_current = None # xxx remove me: not set in daly.py:get_settings()
+        self.timeToGo = 0
         self.control_charge_current = None
         self.control_allow_charge = None
+        self.control_allow_discharge = None
         # max battery charge/discharge current
         self.max_battery_current = None
-        self.max_battery_discharge_current = None
+        self.max_battery_discharge_current = C50 # initial value
         
         self.time_to_soc_update = TIME_TO_SOC_LOOP_CYCLES
+
+        # charging/balancing
+        self.balancing = []
+        self.throttling = None
+
+        self.chargerSM = ChgStateMachine("ChargerStateMachine")
+        self.chargerSM.setState(STATEBULK)
+
+        self.dbgcount = 3570
+
+        self.forceMode = 0 # 1: force discharge/inverter on, -1: force discharge/inverter off
 
     def test_connection(self):
         # Each driver must override this function to test if a connection can be made
@@ -106,48 +364,71 @@ class Battery(object):
                 return
             """
 
-            aboveVolt = 0
-            for cell in self.cells:
-                voltage = cell.voltage
-                if voltage:
-                    voltageSum+=voltage
-                    if voltage > MAX_CELL_VOLTAGE:
-                        aboveVolt += voltage - MAX_CELL_VOLTAGE
-
             minCellVoltage = self.get_min_cell_voltage()
             maxCellVoltage = self.get_max_cell_voltage()
+            cellDiff = maxCellVoltage - minCellVoltage
 
             # logger.info(f"Batt voltage (sum): {voltageSum:.3f}V, cell-low: {minCellVoltage:.3f}V, cell-high: {maxCellVoltage:.3f}, diff: {(maxCellVoltage-minCellVoltage)*1000:.2f}mV")
 
-            assert((minCellVoltage >= 2) and (minCellVoltage < 4))
-
-            # Make min cell-voltage somewhat current-dependent, add up to 0.1V for 1C discharge current
-            minCellAdjusted = MIN_CELL_VOLTAGE
-            if self.current < 0:
-                minCellAdjusted += max(-0.1, (self.current / self.capacity) * 0.1)
-
             # disconnect from battery if a cell voltage is below min voltage
-            if minCellVoltage < minCellAdjusted:
+            if minCellVoltage < MIN_CELL_VOLTAGE:
 
                 # turn off inverter
-                if self.control_discharge_current or (self.control_discharge_current == None):
-                    logger.info(f"turn off inverter, cell-low {minCellVoltage:.3f}V < minCellAdjusted: {minCellAdjusted:.3f}V")
-                self.control_discharge_current = 0.0 # turn off inverter
+                if self.timeToGo:
+                    logger.info(f"turn off inverter, cell-low {minCellVoltage:.3f}V < MIN_CELL_VOLTAGE: {MIN_CELL_VOLTAGE:.3f}V")
+                self.timeToGo = 0
+                self.control_allow_discharge = False
 
             # re-connect to battery if all cells are above min voltage
-            # Or
-            # Start inverter, if service is (re-) started without knowing
-            # current inverter state.
-            elif (minCellVoltage > RECONNECTCELLVOLTAGE) or (self.control_discharge_current == None):
+            elif minCellVoltage > RECONNECTCELLVOLTAGE:
 
                 # turn on inverter
-                if not self.control_discharge_current:
-                    logger.info(f"turn on inverter, cell-low {minCellVoltage:.3f}V > RECONNECTCELLVOLTAGE: {RECONNECTCELLVOLTAGE:.3f}V (or service re-start)")
-                self.control_discharge_current = self.max_battery_discharge_current # turn on inverter
+                if not self.timeToGo:
+                    logger.info(f"turn on inverter, cell-low {minCellVoltage:.3f}V > RECONNECTCELLVOLTAGE: {RECONNECTCELLVOLTAGE:.3f}V")
+                self.timeToGo = 1
+                self.control_allow_discharge = True
             # else:
-                # logger.info(f"keep inverter, minCellAdjusted: {minCellAdjusted:.3f}V < cell-low {minCellVoltage:.3f}V < RECONNECTCELLVOLTAGE: {RECONNECTCELLVOLTAGE:.3f}V")
+                # logger.info(f"keep inverter, MIN_CELL_VOLTAGE: {MIN_CELL_VOLTAGE:.3f}V < cell-low {minCellVoltage:.3f}V < RECONNECTCELLVOLTAGE: {RECONNECTCELLVOLTAGE:.3f}V")
 
-            assert((maxCellVoltage >= 2) and (maxCellVoltage < 4))
+            if self.forceMode:
+                if (self.forceMode == 1) and (minCellVoltage > MIN_CELL_VOLTAGE):
+                    if not self.timeToGo:
+                        logger.info(f"forcing discharge/inverter on, cell-low: {minCellVoltage:.3f}V")
+                    self.timeToGo = 1
+                    self.control_allow_discharge = True
+                elif (self.forceMode == -1):
+                    if self.timeToGo:
+                        logger.info(f"forcing discharge/inverter off")
+                    self.timeToGo = 0
+                    self.control_allow_discharge = False
+
+                self.forceMode = 0
+
+            ###################################################
+            self.chargerSM.run(self)
+            bcv = self.chargerSM.bcv(self)
+            ###################################################
+
+            aboveVolt = 0
+            for cell in self.cells:
+                voltage = cell.voltage
+                voltageSum+=voltage
+                if voltage > bcv:
+                    aboveVolt += voltage - bcv
+
+            # Reset balancing state at midnight
+            if time.localtime().tm_hour == 0:
+                self.chargerSM.getState(STATEBAL).resetDayly()
+
+            batt = self.port.split("/")[-1]
+            if (self.chargerSM.state == STATEBAL) and (batt not in self.balancing):
+                self.balancing.append(batt)
+            else:
+                self.balancing = []
+
+            self.chgmode = self.chargerSM.state
+
+            balanced = self.chargerSM.getState(STATEBAL).isBalanced()
 
             if self.control_voltage == None:
                 # Initial case
@@ -155,36 +436,43 @@ class Battery(object):
             else:
                 chargevoltage = self.control_voltage
 
-            # start charging if all cells below max cell voltage
-            if maxCellVoltage < MAX_CELL_VOLTAGE:
+            maxcv = voltageSum
+            for charger in self.chargers:
+                vc = self.dbusmon.get_value(charger, "/Dc/0/Voltage")
+                maxcv = max(maxcv, vc)
+            diffvolt = min(maxcv - voltageSum, 1)
+            # logger.info(f"charger {maxcv:.3f}V diffvolt: {diffvolt:.3f}V")
 
-                chargevoltage = MAX_CELL_VOLTAGE * self.cell_count
-                if (self.control_voltage == None) or (chargevoltage > self.control_voltage):
-                    logger.info(f"Un-throttling charger, cell-high: {maxCellVoltage:.3f} (max. {MAX_CELL_VOLTAGE:.3f}V), set charge voltage to {chargevoltage:.3f}V")
+            # charging algo
+            if maxCellVoltage < bcv:
+                chargevoltage = bcv * self.cell_count + diffvolt
+                self.throttling = False
+            elif self.chargerSM.state == STATEFLOAT:
+                chargevoltage = bcv * self.cell_count + diffvolt
+                self.throttling = True
+            else: # maxCellVoltage >= bcv
+                # if aboveVolt > 0.025: # allow for 25mV hysteresis to avoid frequent voltage changes
+                    # chargevoltage = min(voltageSum - aboveVolt, self.cell_count * bcv) + diffvolt
+                chargevoltage = bcv * self.cell_count - aboveVolt + diffvolt
+                self.throttling = True
 
-            else:
+            chargevoltage = min(chargevoltage, MAX_CHARGING_VOLTAGE)
 
-                if aboveVolt > 0.025: # allow for 25mV hysteresis to avoid frequent voltage changes
+            if (chargevoltage != self.control_voltage) or (self.dbgcount == 3600):
+                logger.info(f"{self.chargerSM.stateStr()}, {self.current:.1f}A, cellhigh: {maxCellVoltage:.3f}V, above: {aboveVolt:.3f}V, bcv: {bcv:.3f}V, cv: {chargevoltage:.3f}V, bal: {self.balancing}, balanced: {balanced}")
+                if self.dbgcount == 3600:
+                    self.dbgcount = 0
 
-                    chargevoltage = min(voltageSum - aboveVolt,
-                                        self.cell_count * MAX_CELL_VOLTAGE)
-
-                    if (self.control_voltage == None) or (chargevoltage != self.control_voltage):
-                        logger.info(f"Throttling charger, cell-high: {maxCellVoltage:.3f} (max. {MAX_CELL_VOLTAGE:.3f}V), aboveVolt: {aboveVolt:.3f}V, set charge voltage to {chargevoltage:.3f}V")
-
-                # else:
-                    # logger.info(f"keep charger, cell-high: {maxCellVoltage:.3f}, aboveVolt: {aboveVolt:.3f}V")
-
-            # logger.info(f"setting control_voltage: {chargevoltage:.3f}V, control_discharge_current: {str(self.control_discharge_current)}A")
             self.control_voltage = chargevoltage
 
+            self.dbgcount += 1
             return
 
     def manage_charge_current(self):
         # If disabled make sure the default values are set and then exit
         if (not CCCM_ENABLE):
             self.control_charge_current = self.max_battery_current
-            # self.control_discharge_current = self.max_battery_discharge_current
+            self.control_discharge_current = self.max_battery_discharge_current
             self.control_allow_charge = True
             return
 
@@ -341,10 +629,7 @@ class Battery(object):
             return None, None
 
     def get_balancing(self):
-        for c in range(min(len(self.cells), self.cell_count)):
-            if self.cells[c].balance is not None and self.cells[c].balance:
-                return 1
-        return 0
+        return self.balancing
 
     def get_temp(self):
         if self.temp1 is not None and self.temp2 is not None:
@@ -399,3 +684,64 @@ class Battery(object):
         logger.info(f'> MIN_CELL_VOLTAGE {MIN_CELL_VOLTAGE}V | MAX_CELL_VOLTAGE {MAX_CELL_VOLTAGE}V')
   
         return
+
+
+
+
+
+
+
+
+
+if __name__ == "__main__":
+    b = Battery("xport", 999)
+    b.current = 350 #CUTOFFCURR + 5
+    b.cell_count = 16
+    print(b)
+
+    i = 0
+    while True:
+
+        if b.chargerSM.state == STATEBULK:
+            b.cell_min_voltage = 3.450
+            b.cell_max_voltage = b.cell_min_voltage + random.randrange(3, 7)/1000 
+            # print(f"batt: cell_min_voltage: {b.cell_min_voltage}")
+            # print(f"batt: cell_max_voltage: {b.cell_max_voltage}")
+            if b.current > 0:
+                b.current = max(0, b.current-25)
+
+        # print(f"batt: cur: {b.current}")
+
+        if b.chargerSM.state == STATEBAL:
+            b.cell_min_voltage = 3.399
+            b.cell_max_voltage = b.cell_min_voltage + random.randrange(3, 7)/1000 
+            # print(f"batt: cell_min_voltage: {b.cell_min_voltage}")
+            # print(f"batt: cell_max_voltage: {b.cell_max_voltage}")
+
+        if b.chargerSM.state == STATEFLOAT:
+            b.cell_min_voltage -= 0.025
+            b.cell_max_voltage -= 0.025
+            # print(f"batt: cell_min_voltage: {b.cell_min_voltage}")
+            # print(f"batt: cell_max_voltage: {b.cell_max_voltage}")
+
+        # b.chargerSM.run(b)
+        b.manage_charge_voltage()
+
+        bcv = b.chargerSM.getState().bcv(b)
+
+        print(f"    *** batt: cur: {b.current}, bcv: {bcv}, balancer on: {b.balancing}, i: {i} ***")
+
+        if i == 45:
+            b.chargerSM.getState(STATEBAL).resetDayly()
+
+        time.sleep(0.5)
+        i += 1
+
+
+
+
+
+
+
+
+

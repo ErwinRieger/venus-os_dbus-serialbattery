@@ -21,10 +21,8 @@ MAX_VOLTAGE_TIME_SEC = 15*60
 SOC_LEVEL_TO_RESET_VOLTAGE_LIMIT = 90
 
 # battery Current limits
-# MAX_BATTERY_CURRENT = 50.0
-MAX_BATTERY_CURRENT = 250.0 # manne: 100
-# MAX_BATTERY_DISCHARGE_CURRENT = 60.0
-MAX_BATTERY_DISCHARGE_CURRENT = 250.0 # manne: 100
+MAX_BATTERY_CURRENT = 50.0
+MAX_BATTERY_DISCHARGE_CURRENT = 60.0
 
 # Some daly bms have a very unsteady current measurement, enable
 # this to average the current values from bms.
@@ -42,7 +40,8 @@ MIN_CELL_VOLTAGE = 3.0
 # pv charger control
 MAX_CELL_VOLTAGE = 3.45                       # CVCM_ENABLE max charging voltage
 # Charging cellvoltage when to reconnect inverter (load)
-RECONNECTCELLVOLTAGE = 3.275 # 52.4v, about 50% SOC, note: inverter will reconnect at 52v
+RECONNECTCELLVOLTAGE = 3.3 # 52.8v
+BALANCETIME = 120 # [s]
 
 # Simulate Midpoint graph (True/False). 
 MIDPOINT_ENABLE = False
