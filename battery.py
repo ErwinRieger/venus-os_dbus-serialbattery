@@ -51,7 +51,7 @@ class State(object):
 # measureoffs = 0.005
 # u0 = 3.375 # i=0
 cellu0 = 3.375 # + measureoffs
-umax = 3.60 # 3.65, i=0.5C
+umax = 3.5
 
 cellpull = cellu0 + 0.010
 cellfloat = cellu0 - 0.010
@@ -59,7 +59,7 @@ cellfloat = cellu0 - 0.010
 vrange = umax - cellpull
 
 MAX_CHARGING_CELL_VOLTAGE = 3.55
-MAX_CHARGING_VOLTAGE = 3.55*16 # XXX hardcoded number of cells
+MAX_CHARGING_VOLTAGE = umax*16 # XXX hardcoded number of cells
 
 STATEBULK  = 0
 STATEBAL   = 1
@@ -87,14 +87,10 @@ class StateBulk(State):
 
     def bcv(self, battery):
         # bulk, dynamic charging voltage, depends on charging-current
-        # bcv = max(3.45, 3.40 + (3.6-3.40) * battery.current / C50)
-        if self.cc.value == 0:
-            bcv = max(
-                cellpull,
-                min( cellpull + vrange * battery.current / C50, MAX_CHARGING_CELL_VOLTAGE )
-                )
-        else:
-            bcv = cellpull
+        bcv = max(
+            cellpull,
+            min( cellpull + vrange * battery.current / C50, MAX_CHARGING_CELL_VOLTAGE )
+            )
         return bcv
 
     def stateId(self):
@@ -320,8 +316,7 @@ class Battery(object):
         self.time_to_soc_update = TIME_TO_SOC_LOOP_CYCLES
 
         # charging/balancing
-        # XXX unterscheidung verschiedene balancer !!!!!!!!!!!!!
-        self.balancing = False
+        self.balancing = []
         self.throttling = None
 
         self.chargerSM = ChgStateMachine("ChargerStateMachine")
@@ -425,7 +420,11 @@ class Battery(object):
             if time.localtime().tm_hour == 0:
                 self.chargerSM.getState(STATEBAL).resetDayly()
 
-            self.balancing = self.chargerSM.state == STATEBAL
+            batt = self.port.split("/")[-1]
+            if (self.chargerSM.state == STATEBAL) and (batt not in self.balancing):
+                self.balancing.append(batt)
+            else:
+                self.balancing = []
 
             self.chgmode = self.chargerSM.state
 
@@ -630,13 +629,7 @@ class Battery(object):
             return None, None
 
     def get_balancing(self):
-
         return self.balancing
-
-        for c in range(min(len(self.cells), self.cell_count)):
-            if self.cells[c].balance is not None and self.cells[c].balance:
-                return 1
-        return 0
 
     def get_temp(self):
         if self.temp1 is not None and self.temp2 is not None:
